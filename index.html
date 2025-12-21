@@ -3,48 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Game Prototype</title>
+    <title>2인용 카드 게임</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="login-screen">
-        <h1>카드 게임 입장</h1>
-        <button id="google-login-btn">Google 계정으로 로그인</button>
+    <div id="login-screen" class="container">
+        <h1>Card Game Online</h1>
+        <p>Firebase & JS 기반 카드 게임</p>
+        <button id="google-login-btn" class="main-btn">Google 계정으로 로그인</button>
     </div>
 
-    <div id="game-screen" class="hidden">
-        <div class="header">
-            <span id="user-name">플레이어 이름</span>
-            <div class="stats">
-                <span>💰 화폐: <span id="money-display">0</span>원</span>
-                <span>🏆 승점: <span id="vp-display">0</span>점</span>
+    <div id="game-screen" class="container hidden">
+        <header>
+            <div id="user-name">플레이어 준비 중...</div>
+            <div class="stats-bar">
+                <div class="stat-item">💰 화폐: <span id="money-display">0</span>원</div>
+                <div class="stat-item">🏆 승점: <span id="vp-display">0</span>점</div>
             </div>
-        </div>
+        </header>
 
-        <div class="board">
-            <h2>🛒 개인 상점 (구매 가능)</h2>
-            <div class="card-container">
-                <div class="card" id="estate-card">
-                    <h3>사유지 (Estate)</h3>
-                    <p>가격: 2원</p>
-                    <p>남은 수량: <span id="estate-stock">3</span>/3</p>
-                    <button onclick="buyCard('estate')">구매하기</button>
-                </div>
-                <div class="card" id="copper-card">
-                    <h3>동 (Copper)</h3>
-                    <p>가격: 0원</p>
-                    <p>남은 수량: <span id="copper-stock">3</span>/3</p>
-                    <button onclick="buyCard('copper')">구매하기</button>
-                </div>
-            </div>
-
-            <h2>🎒 내 인벤토리</h2>
-            <ul id="inventory-list">
-                </ul>
-        </div>
-    </div>
-
-    <script type="module" src="./app.js"></script>
-</body>
-</html>
+        <main class="game-layout">
+            <section class="shop-area">
+                <h2>🛒 공용 상점</h2>
+                <div class="card-grid">
+                    <div class="card" id="estate-card">
+                        <div class="card-title">사유지</div>
+                        <div class="card-info">가격: 2원 / 승점: +1</div>
+                        <div class="card-stock">남은 수량: <span id="estate-stock">3</span></div>
+                        <button onclick="buyCard('estate')" id="btn-estate">구매하기</button>
+                    </div>
+                    <div class="card" id="copper-card">
+                        <div class="card-title">동 (Copper)</div>
+                        <div class="card-info">가격: 0원 / 화폐: +1</div>
+                        <div class="card-stock">남은 수량: <span id="copper-stock">3</span></div>
+                        <button onclick="buy
