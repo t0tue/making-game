@@ -6,12 +6,12 @@ import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, q
 
 // ⚠️ Firebase 설정값 입력
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAsis2mWlla5CG-FSDXdbM7bu5D4NP6mno",
+  authDomain: "board-online-3339f.firebaseapp.com",
+  projectId: "board-online-3339f",
+  storageBucket: "board-online-3339f.firebasestorage.app",
+  messagingSenderId: "366987303822",
+  appId: "1:366987303822:web:e737afb8d7e2ccc4e322df"
 };
 
 const app = initializeApp(firebaseConfig);
