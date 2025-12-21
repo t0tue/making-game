@@ -125,14 +125,7 @@ window.buyCard = async (type) => {
         });
     } catch (e) { console.error(e); }
 };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-
-let currentUser = null;
-let currentRoomId = null;
-let playerRole = null; 
+;
 
 // --- [인증] ---
 document.getElementById('google-login-btn').addEventListener('click', () => {
