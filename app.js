@@ -24,7 +24,7 @@ let currentRoomId = null;
 let playerRole = null; 
 
 // --- [인증] ---
-/ app.js 내부의 로그인 버튼 부분 수정
+// app.js 내부의 로그인 버튼 부분 수정
 const initLogin = () => {
     const loginBtn = document.getElementById('google-login-btn');
     if (loginBtn) {
