@@ -27,19 +27,23 @@ let currentRoomId = null;
 let playerRole = null; 
 
 // --- [인증] ---
-document.getElementById('google-login-btn').addEventListener('click', () => {
-    signInWithPopup(auth, provider).catch(console.error);
-});
-
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        currentUser = user;
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('game-screen').classList.remove('hidden');
-        startMatchmaking();
+/ app.js 내부의 로그인 버튼 부분 수정
+const initLogin = () => {
+    const loginBtn = document.getElementById('google-login-btn');
+    if (loginBtn) {
+        loginBtn.onclick = () => {
+            console.log("로그인 버튼 클릭됨!"); // 이 글자가 콘솔에 찍히는지 확인
+            signInWithPopup(auth, provider)
+                .then((result) => console.log("로그인 성공:", result.user))
+                .catch((error) => alert("로그인 실패: " + error.message));
+        };
+    } else {
+        console.error("로그인 버튼을 찾을 수 없습니다.");
     }
-});
+};
 
+// 페이지 로드 완료 후 실행
+window.onload = initLogin;
 // --- [매칭] ---
 async function startMatchmaking() {
     document.getElementById('user-name').innerText = "상대방 찾는 중...";
