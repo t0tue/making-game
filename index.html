@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Game Prototype</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="login-screen">
+        <h1>카드 게임 입장</h1>
+        <button id="google-login-btn">Google 계정으로 로그인</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="header">
+            <span id="user-name">플레이어 이름</span>
+            <div class="stats">
+                <span>💰 화폐: <span id="money-display">0</span>원</span>
+                <span>🏆 승점: <span id="vp-display">0</span>점</span>
+            </div>
+        </div>
+
+        <div class="board">
+            <h2>🛒 개인 상점 (구매 가능)</h2>
+            <div class="card-container">
+                <div class="card" id="estate-card">
+                    <h3>사유지 (Estate)</h3>
+                    <p>가격: 2원</p>
+                    <p>남은 수량: <span id="estate-stock">3</span>/3</p>
+                    <button onclick="buyCard('estate')">구매하기</button>
+                </div>
+                <div class="card" id="copper-card">
+                    <h3>동 (Copper)</h3>
+                    <p>가격: 0원</p>
+                    <p>남은 수량: <span id="copper-stock">3</span>/3</p>
+                    <button onclick="buyCard('copper')">구매하기</button>
+                </div>
+            </div>
+
+            <h2>🎒 내 인벤토리</h2>
+            <ul id="inventory-list">
+                </ul>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
