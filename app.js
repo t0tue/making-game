@@ -34,20 +34,29 @@ let playerRole = null;
 
 // --- [인증 로직] ---
 
-// 1. 페이지 로드 시 인증 상태 감시
+// --- [인증 및 화면 전환] ---
 onAuthStateChanged(auth, (user) => {
+    const loginScreen = document.getElementById('login-screen');
+    const gameScreen = document.getElementById('game-screen');
+
     if (user) {
-        // 로그인 성공 상태
+        // 1. 로그인 성공 상태
         currentUser = user;
         console.log("로그인 사용자:", user.displayName);
-        document.getElementById('user-name').innerText = `${user.displayName}님 로그인됨`;
         
-        // 로그인되면 자동으로 매칭 시작
+        // 2. 화면 전환 (로그인창 숨기고 게임창 보이기)
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (gameScreen) gameScreen.classList.remove('hidden');
+        
+        document.getElementById('user-name').innerText = `${user.displayName}님 환영합니다!`;
+        
+        // 3. 게임 매칭 시작
         startMatchmaking();
     } else {
-        // 로그아웃 상태
+        // 4. 로그아웃 상태 또는 로그인 전
         currentUser = null;
-        document.getElementById('user-name').innerText = "로그인이 필요합니다.";
+        if (loginScreen) loginScreen.classList.remove('hidden');
+        if (gameScreen) gameScreen.classList.add('hidden');
     }
 });
 
