@@ -145,4 +145,38 @@ window.buyCard = async (type) => {
 
     const roomRef = doc(db, "rooms", currentRoomId);
     try {
-        await runTransaction(db,
+        await runTransaction(db, async (transaction) => {
+            const roomSnap = await transaction.get(roomRef);
+            const data = roomSnap.data();
+            
+            // 턴 확인 한 번 더 (보안)
+            if (data.turn !== playerRole) throw "내 턴이 아닙니다!";
+
+            const myData = data.gameState[playerRole];
+            const cost = (type === 'estate') ? 2 : 0;
+            const stockKey = (type === 'estate') ? 'estateStock' : 'copperStock';
+
+            if (myData[stockKey] <= 0 || myData.money < cost) {
+                alert("구매 조건이 부족합니다.");
+                return;
+            }
+
+            // 데이터 변경
+            myData.money -= cost;
+            myData[stockKey] -= 1;
+            myData.inventory.push(type === 'estate' ? "사유지" : "동");
+            if (type === 'estate') myData.vp += 1;
+
+            // 트랜잭션 업데이트
+            transaction.update(roomRef, {
+                [`gameState.${playerRole}`]: myData,
+                turn: playerRole === 'p1Data' ? 'p2Data' : 'p1Data'
+            });
+        });
+    } catch (e) { 
+        console.error("구매 실패:", e); 
+    }
+};
+
+// 초기 실행
+window.addEventListener('DOMContentLoaded', initLogin);
