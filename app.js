@@ -1,17 +1,25 @@
-
-// ⚠️ Firebase 설정값 입력
+// --- [Firebase SDK Import] ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, limit, getDocs, addDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+    getAuth, 
+    signInWithRedirect, 
+    GoogleAuthProvider, 
+    onAuthStateChanged,
+    getRedirectResult 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+    getFirestore, doc, updateDoc, onSnapshot, collection, 
+    query, where, limit, getDocs, addDoc, runTransaction 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ⚠️ Firebase 설정값 입력
+// --- [Firebase 설정] ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAsis2mWlla5CG-FSDXdbM7bu5D4NP6mno",
-  authDomain: "board-online-3339f.firebaseapp.com",
-  projectId: "board-online-3339f",
-  storageBucket: "board-online-3339f.firebasestorage.app",
-  messagingSenderId: "366987303822",
-  appId: "1:366987303822:web:e737afb8d7e2ccc4e322df"
+    apiKey: "AIzaSyAsis2mWlla5CG-FSDXdbM7bu5D4NP6mno",
+    authDomain: "board-online-3339f.firebaseapp.com",
+    projectId: "board-online-3339f",
+    storageBucket: "board-online-3339f.firebasestorage.app",
+    messagingSenderId: "366987303822",
+    appId: "1:366987303822:web:e737afb8d7e2ccc4e322df"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -19,50 +27,66 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+// 전역 변수
 let currentUser = null;
 let currentRoomId = null;
 let playerRole = null; 
 
-// --- [인증] ---
-// app.js 내부의 로그인 버튼 부분 수정
+// --- [인증 로직] ---
+
+// 1. 페이지 로드 시 인증 상태 감시
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // 로그인 성공 상태
+        currentUser = user;
+        console.log("로그인 사용자:", user.displayName);
+        document.getElementById('user-name').innerText = `${user.displayName}님 로그인됨`;
+        
+        // 로그인되면 자동으로 매칭 시작
+        startMatchmaking();
+    } else {
+        // 로그아웃 상태
+        currentUser = null;
+        document.getElementById('user-name').innerText = "로그인이 필요합니다.";
+    }
+});
+
+// 2. 로그인 버튼 클릭 핸들러 (COOP 에러 방지를 위해 Redirect 방식 사용)
 const initLogin = () => {
     const loginBtn = document.getElementById('google-login-btn');
     if (loginBtn) {
         loginBtn.onclick = () => {
-            // Popup 대신 Redirect 사용
+            console.log("로그인 시도 중...");
             signInWithRedirect(auth, provider);
         };
     }
 };
 
-// 페이지 로드 시 리다이렉트 결과 처리
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        currentUser = user;
-        console.log("로그인 성공:", user.displayName);
-        startMatchmaking(); // 로그인 성공 시 매칭 시작
-    }
-});
-
-// 페이지 로드 완료 후 실행
-window.onload = initLogin;
-// --- [매칭] ---
+// --- [매칭 로직] ---
 async function startMatchmaking() {
+    if (!currentUser) return;
+
     document.getElementById('user-name').innerText = "상대방 찾는 중...";
     const roomsRef = collection(db, "rooms");
+    
+    // 대기 중인 방 찾기
     const q = query(roomsRef, where("status", "==", "waiting"), limit(1));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
+        // 1. 기존에 대기 중인 방이 있다면 입장 (P2)
         const roomDoc = querySnapshot.docs[0];
         currentRoomId = roomDoc.id;
         playerRole = 'p2Data';
+        
         await updateDoc(doc(db, "rooms", currentRoomId), {
             players: [roomDoc.data().players[0], currentUser.uid],
             playerNames: [roomDoc.data().playerNames[0], currentUser.displayName],
             status: "playing"
         });
+        console.log("기존 방 입장:", currentRoomId);
     } else {
+        // 2. 대기 중인 방이 없다면 새로 생성 (P1)
         playerRole = 'p1Data';
         const newDoc = await addDoc(roomsRef, {
             status: "waiting",
@@ -75,21 +99,31 @@ async function startMatchmaking() {
             }
         });
         currentRoomId = newDoc.id;
+        console.log("새 방 생성됨:", currentRoomId);
     }
+    
+    // 게임 동기화 시작
     syncGame();
 }
 
-// --- [동기화] ---
+// --- [게임 동기화] ---
 function syncGame() {
+    if (!currentRoomId) return;
+
     onSnapshot(doc(db, "rooms", currentRoomId), (snapshot) => {
         const data = snapshot.data();
         if (!data) return;
 
-        if (data.status === "waiting") return;
+        // 상대방 기다리는 중일 때
+        if (data.status === "waiting") {
+            document.getElementById('user-name').innerText = "⏳ 상대방 대기 중...";
+            return;
+        }
 
         const myData = data.gameState[playerRole];
         const isMyTurn = data.turn === playerRole;
 
+        // UI 업데이트
         document.getElementById('user-name').innerText = isMyTurn ? "🔴 내 턴입니다!" : "⏳ 상대방의 턴...";
         document.getElementById('money-display').innerText = myData.money;
         document.getElementById('vp-display').innerText = myData.vp;
@@ -99,37 +133,16 @@ function syncGame() {
         const invList = document.getElementById('inventory-list');
         invList.innerHTML = myData.inventory.map(item => `<li>🃏 ${item}</li>`).join('');
 
+        // 버튼 활성/비활성
         document.getElementById('btn-estate').disabled = !isMyTurn;
         document.getElementById('btn-copper').disabled = !isMyTurn;
     });
 }
 
-// --- [액션] ---
+// --- [카드 구매 액션] ---
 window.buyCard = async (type) => {
+    if (!currentRoomId || !playerRole) return;
+
     const roomRef = doc(db, "rooms", currentRoomId);
     try {
-        await runTransaction(db, async (transaction) => {
-            const roomSnap = await transaction.get(roomRef);
-            const data = roomSnap.data();
-            const myData = data.gameState[playerRole];
-            
-            const cost = (type === 'estate') ? 2 : 0;
-            const stockKey = (type === 'estate') ? 'estateStock' : 'copperStock';
-
-            if (myData[stockKey] <= 0 || myData.money < cost) return;
-
-            myData.money -= cost;
-            myData[stockKey] -= 1;
-            myData.inventory.push(type === 'estate' ? "사유지" : "동");
-            if (type === 'estate') myData.vp += 1;
-
-            transaction.update(roomRef, {
-                [`gameState.${playerRole}`]: myData,
-                turn: playerRole === 'p1Data' ? 'p2Data' : 'p1Data'
-            });
-        });
-    } catch (e) { console.error(e); }
-};
-;
-
-
+        await runTransaction(db,
