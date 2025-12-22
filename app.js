@@ -1,7 +1,7 @@
 
 // ⚠️ Firebase 설정값 입력
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInWithRedirect, GoogleAuthProvider, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, limit, getDocs, addDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ⚠️ Firebase 설정값 입력
@@ -29,15 +29,20 @@ const initLogin = () => {
     const loginBtn = document.getElementById('google-login-btn');
     if (loginBtn) {
         loginBtn.onclick = () => {
-            console.log("로그인 버튼 클릭됨!"); // 이 글자가 콘솔에 찍히는지 확인
-            signInWithPopup(auth, provider)
-                .then((result) => console.log("로그인 성공:", result.user))
-                .catch((error) => alert("로그인 실패: " + error.message));
+            // Popup 대신 Redirect 사용
+            signInWithRedirect(auth, provider);
         };
-    } else {
-        console.error("로그인 버튼을 찾을 수 없습니다.");
     }
 };
+
+// 페이지 로드 시 리다이렉트 결과 처리
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        console.log("로그인 성공:", user.displayName);
+        startMatchmaking(); // 로그인 성공 시 매칭 시작
+    }
+});
 
 // 페이지 로드 완료 후 실행
 window.onload = initLogin;
