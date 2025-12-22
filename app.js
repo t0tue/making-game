@@ -1,16 +1,9 @@
 // --- [Firebase SDK Import] ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getAuth, 
-    signInWithRedirect, 
-    GoogleAuthProvider, 
-    onAuthStateChanged,
-    getRedirectResult 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-    getFirestore, doc, updateDoc, onSnapshot, collection, 
-    query, where, limit, getDocs, addDoc, runTransaction 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {  getFirestore, doc, updateDoc, onSnapshot, collection, query, where, limit, getDocs, addDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// 리다이렉트 처리 결과 확인용
+import { getRedirectResult } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // --- [Firebase 설정] ---
 const firebaseConfig = {
@@ -70,6 +63,19 @@ const initLogin = () => {
         };
     }
 };
+
+// 추가해줄 로직
+getRedirectResult(auth)
+  .then((result) => {
+    if (result?.user) {
+      console.log("리다이렉트 로그인 성공:", result.user.displayName);
+      // 여기서 화면 전환 로직이 onAuthStateChanged와 중복되어도 상관없습니다.
+    }
+  })
+  .catch((error) => {
+    console.error("리다이렉트 에러 상세:", error.code, error.message);
+    alert("로그인 에러: " + error.message);
+  });
 
 // --- [매칭 로직] ---
 async function startMatchmaking() {
