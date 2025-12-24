@@ -36,7 +36,7 @@ const specialUnits = [
 ];
 
 const midBossData = { 
-    id: 'midboss', name: '오크 대장', type: 'icon', 
+    id: 'midboss', name: '오크 대장', type: 'icon', cost: 1000, // 보스는 현상금 높게 설정
     baseHp: 3000, baseDmg: 60, range: 50, speed: 0.6, 
     color: '#8e44ad', icon: '👹', level: 1
 };
@@ -68,6 +68,11 @@ class Unit {
         this.name = typeData.name;
         this.team = team;
         
+        // 현상금 설정 (유닛 비용의 20% 정도)
+        // 보스는 더 많이 줌
+        this.bounty = Math.floor((typeData.cost || 100) * 0.2);
+        if (this.id === 'midboss') this.bounty = 500;
+
         let stats = getUnitStats(typeData);
         
         // 적군은 스테이지에 따라 강해짐
@@ -75,6 +80,9 @@ class Unit {
             const stageMulti = 1 + (gameState.stage - 1) * 0.15;
             stats.hp *= stageMulti;
             stats.dmg *= stageMulti;
+            
+            // 스테이지가 오르면 현상금도 약간 증가
+            this.bounty = Math.floor(this.bounty * (1 + (gameState.stage - 1) * 0.1));
         }
 
         this.hp = stats.hp;
@@ -119,7 +127,7 @@ class Unit {
         if (this.attackCooldown > 0) this.attackCooldown--;
         if (this.attackAnim > 0) this.attackAnim--;
 
-        // 거상 모션 (돈 벌때 애니메이션)
+        // 거상 모션
         if (this.id === 'merchant' && gameState.frame % 60 === 0) {
             this.attackAnim = 10; 
         }
@@ -199,22 +207,18 @@ class Unit {
     }
 
     draw() {
-        // 1. 공격 모션 계산 (찌르기/반동 효과)
         let animOffsetX = 0;
         let animOffsetY = 0;
 
         if (this.attackAnim > 0) {
-            const p = this.attackAnim / 15; // 1.0 -> 0.0
-            const amount = 8; // 움직임 강도
+            const p = this.attackAnim / 15; 
+            const amount = 8; 
             
             if (['sword', 'tank', 'midboss', 'general'].includes(this.id)) {
-                // 근접: 앞으로 찌르기
                 animOffsetX = Math.sin(p * Math.PI) * amount * this.direction;
             } else if (this.id === 'merchant') {
-                // 거상: 점프
                 animOffsetY = -Math.sin(p * Math.PI) * amount;
             } else {
-                // 원거리: 뒤로 반동
                 animOffsetX = -Math.sin(p * Math.PI) * (amount * 0.5) * this.direction;
             }
         }
@@ -222,25 +226,20 @@ class Unit {
         const drawX = this.x + animOffsetX;
         const drawY = this.y + animOffsetY;
 
-        // 2. 캔버스 상태 저장 및 좌표 변환
         ctx.save();
         ctx.translate(drawX, drawY);
-        
-        // 적군일 경우 좌우 반전 (아이콘이 왼쪽을 보게 함)
         ctx.scale(this.direction, 1); 
 
-        // 3. 그림자 (유닛 입체감)
+        // 그림자
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
         ctx.ellipse(0, 12, 8, 3, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 4. 유닛 아이콘 그리기 (함수 호출)
         drawUnitIcon(ctx, this.id, this.team, this.color);
 
-        ctx.restore(); // 좌표 변환 복구
+        ctx.restore(); 
 
-        // 5. 오라 이펙트 (장군, 사제) - 좌표 복구 후 절대 좌표에 그림
         if (this.team === 'player') {
             if (this.id === 'general') {
                 ctx.beginPath(); ctx.strokeStyle = 'rgba(230, 126, 34, 0.5)';
@@ -250,7 +249,6 @@ class Unit {
             }
         }
 
-        // 6. HP Bar (유닛 위에 표시)
         const hpPercent = Math.max(0, this.hp / this.maxHp);
         const barW = (this.id === 'midboss') ? 50 : 24;
         const barY = (this.id === 'midboss') ? 50 : 25;
@@ -512,7 +510,19 @@ function update() {
     }
 
     units.forEach(u => u.update());
-    units = units.filter(u => u.hp > 0);
+
+    // [수정됨] 유닛 사망 처리 및 골드 보상 로직
+    units = units.filter(u => {
+        if (u.hp <= 0) {
+            // 적군 사망 시 보상 지급
+            if (u.team === 'enemy') {
+                gameState.gold += u.bounty;
+                createDamageText(u.x, u.y - 20, `+${u.bounty}G`, "#f1c40f"); // 노란색 돈 텍스트
+            }
+            return false; // 배열에서 제거
+        }
+        return true; // 생존
+    });
     
     spawnEnemyAI();
 
@@ -612,7 +622,6 @@ function endGame(msg) {
 
 // --- 유닛 아이콘 그리기 함수 (Canvas Drawing) ---
 function drawUnitIcon(ctx, id, team, color) {
-    // 공통 스타일 설정
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -620,33 +629,28 @@ function drawUnitIcon(ctx, id, team, color) {
     ctx.fillStyle = color;
 
     switch (id) {
-        case 'sword': // ⚔️ 검 모양
-            // 검날
+        case 'sword': // ⚔️
             ctx.fillStyle = '#ecf0f1';
             ctx.beginPath();
             ctx.moveTo(-6, 4); ctx.lineTo(12, 0); ctx.lineTo(-6, -4);
             ctx.fill(); ctx.stroke();
-            // 손잡이
             ctx.strokeStyle = '#e67e22';
             ctx.beginPath();
-            ctx.moveTo(-6, 6); ctx.lineTo(-6, -6); // 가로 막대
-            ctx.moveTo(-6, 0); ctx.lineTo(-12, 0); // 손잡이
+            ctx.moveTo(-6, 6); ctx.lineTo(-6, -6);
+            ctx.moveTo(-6, 0); ctx.lineTo(-12, 0);
             ctx.stroke();
             break;
 
-        case 'archer': // 🏹 활 모양
-            // 활대
-            ctx.strokeStyle = '#8e44ad'; // 활 색상
+        case 'archer': // 🏹
+            ctx.strokeStyle = '#8e44ad';
             ctx.beginPath();
             ctx.arc(-5, 0, 12, -Math.PI/2, Math.PI/2); 
             ctx.stroke();
-            // 활시위
             ctx.strokeStyle = '#ecf0f1';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(-5, -12); ctx.lineTo(-5, 12);
             ctx.stroke();
-            // 화살
             ctx.strokeStyle = '#e74c3c';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -654,93 +658,82 @@ function drawUnitIcon(ctx, id, team, color) {
             ctx.stroke();
             break;
 
-        case 'tank': // 🛡️ 방패 모양
+        case 'tank': // 🛡️
             ctx.fillStyle = color;
             ctx.strokeStyle = '#fff';
             ctx.beginPath();
-            ctx.moveTo(-8, -10); ctx.lineTo(8, -10); // 상단
-            ctx.lineTo(8, 2); // 우측
-            ctx.quadraticCurveTo(0, 12, -8, 2); // 하단 곡선
+            ctx.moveTo(-8, -10); ctx.lineTo(8, -10);
+            ctx.lineTo(8, 2);
+            ctx.quadraticCurveTo(0, 12, -8, 2);
             ctx.closePath();
             ctx.fill(); ctx.stroke();
-            // 방패 무늬 (십자가)
             ctx.beginPath();
             ctx.moveTo(0, -6); ctx.lineTo(0, 6);
             ctx.moveTo(-4, 0); ctx.lineTo(4, 0);
             ctx.stroke();
             break;
 
-        case 'wizard': // 🔮 지팡이
-            // 지팡이 대
+        case 'wizard': // 🔮
             ctx.strokeStyle = '#8e44ad';
             ctx.beginPath();
             ctx.moveTo(4, 10); ctx.lineTo(-4, -10);
             ctx.stroke();
-            // 보석
             ctx.fillStyle = '#3498db';
             ctx.beginPath();
             ctx.arc(-4, -12, 4, 0, Math.PI*2);
             ctx.fill(); ctx.stroke();
             break;
 
-        case 'cannon': // 💣 대포
-            // 바퀴
+        case 'cannon': // 💣
             ctx.fillStyle = '#8e44ad'; 
             ctx.beginPath(); ctx.arc(0, 5, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            // 포신
             ctx.fillStyle = '#34495e';
             ctx.translate(0, -2);
-            ctx.rotate(-0.2); // 약간 위로
+            ctx.rotate(-0.2); 
             ctx.beginPath(); ctx.rect(-5, -4, 16, 8); ctx.fill(); ctx.stroke();
             break;
 
-        case 'healer': // 🌿 십자가 (메딕)
+        case 'healer': // 🌿
             ctx.fillStyle = '#fff';
             ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#e74c3c';
             ctx.beginPath();
-            ctx.rect(-2, -6, 4, 12); // 세로
-            ctx.rect(-6, -2, 12, 4); // 가로
+            ctx.rect(-2, -6, 4, 12);
+            ctx.rect(-6, -2, 12, 4);
             ctx.fill();
             break;
 
-        case 'merchant': // 💰 돈주머니
-            ctx.fillStyle = '#f1c40f'; // 금색
+        case 'merchant': // 💰
+            ctx.fillStyle = '#f1c40f'; 
             ctx.beginPath();
-            ctx.arc(0, 4, 8, 0, Math.PI*2); // 몸통
+            ctx.arc(0, 4, 8, 0, Math.PI*2);
             ctx.fill(); ctx.stroke();
-            ctx.beginPath(); // 입구 주름
+            ctx.beginPath(); 
             ctx.moveTo(-3, -3); ctx.lineTo(3, -3); ctx.lineTo(0, -9); ctx.closePath();
             ctx.fill(); ctx.stroke();
-            // $ 마크 (거상은 아군만 사용하므로 뒤집힘 고려 X, 필요시 scale 조정)
             ctx.fillStyle = '#d35400';
             ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('$', 0, 7);
             break;
 
-        case 'general': // 🚩 깃발
-            // 깃대
+        case 'general': // 🚩
             ctx.strokeStyle = '#7f8c8d';
             ctx.beginPath(); ctx.moveTo(-5, 12); ctx.lineTo(-5, -12); ctx.stroke();
-            // 깃발 천
             ctx.fillStyle = '#e67e22';
             ctx.beginPath();
             ctx.moveTo(-5, -12); ctx.lineTo(10, -5); ctx.lineTo(-5, 2);
             ctx.fill(); ctx.stroke();
             break;
 
-        case 'midboss': // 👹 오크 대장 (뿔 달린 투구)
-            ctx.fillStyle = '#8e44ad'; // 보라색 피부
+        case 'midboss': // 👹
+            ctx.fillStyle = '#8e44ad'; 
             ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            // 뿔
             ctx.fillStyle = '#fff';
             ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(-18, -15); ctx.lineTo(-6, -10); ctx.fill();
             ctx.beginPath(); ctx.moveTo(10, -5); ctx.lineTo(18, -15); ctx.lineTo(6, -10); ctx.fill();
-            // 눈
             ctx.fillStyle = 'red';
             ctx.beginPath(); ctx.arc(-5, 2, 2, 0, Math.PI*2); ctx.arc(5, 2, 2, 0, Math.PI*2); ctx.fill();
-            // 이빨
             ctx.fillStyle = '#fff';
             ctx.beginPath(); 
             ctx.moveTo(-3, 8); ctx.lineTo(-3, 12); ctx.lineTo(-1, 8);
@@ -748,7 +741,7 @@ function drawUnitIcon(ctx, id, team, color) {
             ctx.fill();
             break;
             
-        default: // 기본 (원)
+        default:
             ctx.beginPath();
             ctx.arc(0, 0, 10, 0, Math.PI*2);
             ctx.fill(); ctx.stroke();
