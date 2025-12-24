@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>공성전: 군단 강화</title>
+    <title>공성전: 액션 업데이트</title>
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
@@ -18,129 +18,70 @@
 
         h1 { margin: 5px 0 15px 0; text-shadow: 0 0 10px rgba(255,255,255,0.3); font-size: 24px; }
 
-        /* --- 스테이지 진행 바 스타일 시작 --- */
         .progress-container {
-            width: 400px;
-            height: 40px;
-            position: relative;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            width: 400px; height: 40px; position: relative;
+            display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 10px;
         }
-
-        /* 배경 선 */
         .progress-track {
-            position: absolute;
-            top: 50%; left: 0;
-            width: 100%; height: 4px;
-            background: #444;
-            transform: translateY(-50%);
-            z-index: 0;
-            border-radius: 2px;
+            position: absolute; top: 50%; left: 0; width: 100%; height: 4px;
+            background: #444; transform: translateY(-50%); z-index: 0; border-radius: 2px;
         }
-
-        /* 채워지는 선 (진행도) */
         .progress-fill {
-            position: absolute;
-            top: 50%; left: 0;
-            height: 4px;
-            background: #e67e22;
-            transform: translateY(-50%);
-            z-index: 0;
-            width: 0%; /* JS로 제어 */
-            transition: width 0.5s ease;
+            position: absolute; top: 50%; left: 0; height: 4px;
+            background: #e67e22; transform: translateY(-50%); z-index: 0;
+            width: 0%; transition: width 0.5s ease;
         }
-
-        /* 점 (Dot) */
         .stage-dot {
-            width: 16px; height: 16px;
-            background: #2c3e50;
-            border: 3px solid #555;
-            border-radius: 50%;
-            z-index: 1;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
+            width: 16px; height: 16px; background: #2c3e50;
+            border: 3px solid #555; border-radius: 50%; z-index: 1;
+            transition: all 0.3s; position: relative;
             display: flex; justify-content: center; align-items: center;
             font-size: 10px; font-weight: bold; color: transparent;
         }
-
-        /* 지나온 스테이지 */
-        .stage-dot.passed {
-            background: #e67e22;
-            border-color: #e67e22;
-        }
-
-        /* 현재 스테이지 */
+        .stage-dot.passed { background: #e67e22; border-color: #e67e22; }
         .stage-dot.active {
-            width: 24px; height: 24px;
-            background: #d35400;
-            border-color: #fff;
-            box-shadow: 0 0 15px #e67e22;
-            transform: scale(1.2);
-            color: #fff; /* 현재 스테이지 숫자 표시 */
+            width: 24px; height: 24px; background: #d35400; border-color: #fff;
+            box-shadow: 0 0 15px #e67e22; transform: scale(1.2); color: #fff;
         }
-        /* --- 스테이지 진행 바 스타일 끝 --- */
 
         #game-info {
-            width: 840px;
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            color: #aaa;
-            font-size: 14px;
+            width: 840px; display: flex; justify-content: space-between;
+            margin-bottom: 5px; color: #aaa; font-size: 14px;
         }
 
         canvas {
             background: linear-gradient(to bottom, #5d9634, #4a8c4a);
             border: 4px solid #444;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 15px;
-            border-radius: 4px;
+            margin-bottom: 15px; border-radius: 4px;
         }
 
         #ui-panel {
-            width: 860px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            background: #2c3e50;
-            padding: 15px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            border: 1px solid #34495e;
-            position: relative;
+            width: 860px; display: flex; justify-content: space-between; align-items: flex-start;
+            background: #2c3e50; padding: 15px; border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid #34495e; position: relative;
         }
 
         .resource-box {
-            font-size: 20px;
-            font-weight: bold;
-            color: #f1c40f;
-            text-align: center;
-            min-width: 90px;
-            margin-top: 10px;
+            font-size: 20px; font-weight: bold; color: #f1c40f;
+            text-align: center; min-width: 90px; margin-top: 10px;
         }
 
         #deck-container { display: flex; gap: 6px; }
 
         .card {
-            width: 95px; height: 230px;
-            background: #34495e;
-            border: 3px solid transparent;
-            border-radius: 10px;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: flex-start;
-            padding-top: 8px;
-            position: relative;
+            width: 95px; height: 230px; background: #34495e;
+            border: 3px solid transparent; border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            padding-top: 8px; position: relative;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); overflow: hidden;
             transition: transform 0.1s;
         }
-        
         .card.hero-card { border-color: #FFD700; background: #2c2c2c; }
 
         .spawn-zone {
-            width: 100%; height: 160px;
-            display: flex; flex-direction: column; align-items: center;
+            width: 100%; height: 160px; display: flex; flex-direction: column; align-items: center;
             cursor: pointer; z-index: 2;
         }
         .spawn-zone:hover { background: rgba(255,255,255,0.05); }
@@ -148,8 +89,7 @@
 
         .cooldown-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 160px;
-            background: rgba(0, 0, 0, 0.7); transition: height 0.1s linear; z-index: 1;
-            pointer-events: none;
+            background: rgba(0, 0, 0, 0.7); transition: height 0.1s linear; z-index: 1; pointer-events: none;
         }
 
         .card-icon { font-size: 22px; margin-bottom: 2px; }
@@ -157,25 +97,19 @@
         .card-cost { background: rgba(0,0,0,0.6); padding: 1px 6px; border-radius: 8px; font-size: 11px; color: #ffd700; margin-bottom: 4px;}
 
         .card-stats {
-            background: rgba(0, 0, 0, 0.4);
-            width: 88%; padding: 4px;
-            border-radius: 4px; color: #ddd;
-            font-size: 10px; text-align: left;
-            line-height: 1.4;
-            display: flex; flex-direction: column; gap: 1px;
+            background: rgba(0, 0, 0, 0.4); width: 88%; padding: 4px;
+            border-radius: 4px; color: #ddd; font-size: 10px; text-align: left;
+            line-height: 1.4; display: flex; flex-direction: column; gap: 1px;
         }
         .stat-row { display: flex; justify-content: space-between; }
         .stat-val { font-weight: bold; color: #fff; }
         .lvl-badge { 
-            position: absolute; top: 2px; left: 2px; 
-            background: #e74c3c; color: white; 
-            font-size: 10px; padding: 2px 4px; border-radius: 4px; font-weight: bold;
-            z-index: 10;
+            position: absolute; top: 2px; left: 2px; background: #e74c3c; color: white; 
+            font-size: 10px; padding: 2px 4px; border-radius: 4px; font-weight: bold; z-index: 10;
         }
 
         .upgrade-btn {
-            width: 100%; height: 40px;
-            background: #27ae60; color: white; border: none;
+            width: 100%; height: 40px; background: #27ae60; color: white; border: none;
             border-top: 1px solid #444; cursor: pointer;
             font-size: 11px; font-weight: bold;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -228,7 +162,7 @@
         <div class="stage-dot" id="dot-7">7</div>
     </div>
 
-    <h1>🏰 공성전: 포격 개시</h1>
+    <h1>🏰 공성전: 액션 업데이트</h1>
 
     <div id="game-info">
         <span id="game-timer">시간: 00:00</span>
@@ -264,7 +198,6 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // --- 게임 상태 ---
     let gameState = {
         gold: 350,      
         baseIncome: 10,
@@ -282,19 +215,18 @@
     const playerBase = { x: 60, y: 200, hp: 5000, maxHp: 5000, color: '#3498db' };
     const enemyBase = { x: 780, y: 200, hp: 5000, maxHp: 5000, color: '#e74c3c' };
 
-    // --- 유닛 데이터 ---
     const unitTypes = [
         { id: 'sword', name: '검병', desc: '근접 기본', type: 'circle', cost: 50, baseHp: 120, baseDmg: 10, range: 35, speed: 1.5, color: '#ecf0f1', icon: '⚔️', cooldown: 30, level: 1, maxLevel: 10, upgradeCostBase: 100 },
-        { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'triangle', cost: 50, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 200 },
-        { id: 'tank', name: '방패병', desc: '높은 체력', type: 'square', cost: 50, baseHp: 450, baseDmg: 8, range: 35, speed: 0.8, color: '#f1c40f', icon: '🛡️', cooldown: 60, level: 1, maxLevel: 10, upgradeCostBase: 300 },
-        { id: 'wizard', name: '마법사', desc: '광역 폭딜', type: 'diamond', cost: 50, baseHp: 90, baseDmg: 45, range: 140, speed: 1.0, color: '#9b59b6', icon: '🔮', cooldown: 90, level: 1, maxLevel: 10, upgradeCostBase: 500 },
-        { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'cannon', cost: 50, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 600 }
+        { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'triangle', cost: 130, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 200 },
+        { id: 'tank', name: '방패병', desc: '높은 체력', type: 'square', cost: 220, baseHp: 450, baseDmg: 8, range: 35, speed: 0.8, color: '#f1c40f', icon: '🛡️', cooldown: 60, level: 1, maxLevel: 10, upgradeCostBase: 300 },
+        { id: 'wizard', name: '마법사', desc: '광역 폭딜', type: 'diamond', cost: 400, baseHp: 90, baseDmg: 45, range: 140, speed: 1.0, color: '#9b59b6', icon: '🔮', cooldown: 90, level: 1, maxLevel: 10, upgradeCostBase: 500 },
+        { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'cannon', cost: 600, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 600 }
     ];
 
     const specialUnits = [
-        { id: 'merchant', name: '거상', desc: '수입 증가', type: 'star', cost: 50, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1 },
-        { id: 'healer', name: '사제', desc: '아군 치유', type: 'cross', cost: 50, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1 },
-        { id: 'general', name: '장군', desc: '공격력 버프', type: 'pentagon', cost: 50, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1 }
+        { id: 'merchant', name: '거상', desc: '수입 증가', type: 'star', cost: 300, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1 },
+        { id: 'healer', name: '사제', desc: '아군 치유', type: 'cross', cost: 350, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1 },
+        { id: 'general', name: '장군', desc: '공격력 버프', type: 'pentagon', cost: 500, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1 }
     ];
 
     const midBossData = { 
@@ -321,6 +253,7 @@
     let particles = [];
     let damageTexts = [];
 
+    // --- 유닛 클래스 ---
     class Unit {
         constructor(typeData, team) {
             this.id = typeData.id;
@@ -347,6 +280,7 @@
             
             this.maxAttackCooldown = (this.id === 'cannon') ? 100 : 50;
             this.attackCooldown = 0;
+            this.attackAnim = 0; // 공격 모션 타이머
 
             this.y = 300 + (Math.random() * 30 - 15); 
             if (team === 'player') {
@@ -375,6 +309,12 @@
         update() {
             if (this.hp <= 0) return;
             if (this.attackCooldown > 0) this.attackCooldown--;
+            if (this.attackAnim > 0) this.attackAnim--; // 모션 타이머 감소
+
+            // 거상 모션 (돈 벌때)
+            if (this.id === 'merchant' && gameState.frame % 60 === 0) {
+                this.attackAnim = 10; 
+            }
 
             let target = null;
             let minDist = Infinity;
@@ -420,6 +360,8 @@
         }
 
         attack(target) {
+            this.attackAnim = 15; // 공격 모션 시작 (15프레임)
+
             let actualDmg = this.dmg;
             if (actualDmg > 0 && this.team === 'player') {
                 const hasGeneral = units.some(u => u.team === 'player' && u.id === 'general' && Math.abs(u.x - this.x) < u.effectRange);
@@ -427,10 +369,11 @@
             }
 
             if (this.id === 'cannon') {
-                createParticle(this.x, this.y, '#555', 8); 
+                createParticle(this.x + 20 * this.direction, this.y - 10, '#555', 8); 
                 createDamageText(this.x, this.y - 40, "BOOM!", "#f39c12");
             }
 
+            // 데미지 적용은 약간 딜레이를 주면 좋지만 여기선 즉시 적용
             if (actualDmg < 0) {
                 target.hp = Math.min(target.maxHp, target.hp - actualDmg);
                 createDamageText(target.x, target.y - 30, "+" + Math.abs(Math.floor(actualDmg)), "green");
@@ -443,6 +386,27 @@
         }
 
         draw() {
+            // 공격 모션 계산
+            let drawX = this.x;
+            let drawY = this.y;
+
+            if (this.attackAnim > 0) {
+                const p = this.attackAnim / 15; // 진행률 1.0 -> 0.0
+                const lungeAmount = Math.sin(p * Math.PI) * 10;
+                
+                if (this.id === 'sword' || this.id === 'tank' || this.id === 'midboss' || this.id === 'general') {
+                    // 근접: 앞으로 찌르기
+                    drawX += lungeAmount * this.direction;
+                } else if (this.id === 'merchant') {
+                    // 거상: 위로 점프
+                    drawY -= lungeAmount;
+                } else {
+                    // 원거리: 뒤로 반동
+                    drawX -= lungeAmount * 0.5 * this.direction;
+                }
+            }
+
+            // 오라 그리기 (위치 보정 X)
             if (this.team === 'player') {
                 if (this.id === 'general') {
                     ctx.beginPath(); ctx.fillStyle = 'rgba(230, 126, 34, 0.1)';
@@ -466,50 +430,54 @@
             ctx.beginPath();
             if (this.type === 'cannon') {
                 ctx.fillStyle = '#7f8c8d';
-                ctx.arc(this.x, this.y + 8, 10, 0, Math.PI * 2);
+                ctx.arc(drawX, drawY + 8, 10, 0, Math.PI * 2);
                 ctx.fill(); ctx.stroke();
                 
                 ctx.beginPath();
                 ctx.fillStyle = '#2c3e50';
                 const angle = this.team === 'player' ? -0.3 : 0.3;
+                // 공격 시 포신 후퇴
+                const recoil = (this.attackAnim > 0) ? -5 * Math.sin(this.attackAnim/15 * Math.PI) : 0;
+                
                 ctx.save();
-                ctx.translate(this.x, this.y);
+                ctx.translate(drawX, drawY);
                 ctx.rotate(angle);
-                ctx.rect(-5, -25, 10, 30);
+                ctx.rect(-5 + recoil, -25, 10, 30);
                 ctx.fill(); ctx.stroke();
                 ctx.restore();
 
             } else if (this.type === 'circle') {
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.arc(drawX, drawY, this.radius, 0, Math.PI * 2);
                 ctx.fill(); ctx.stroke();
             } else if (this.type === 'triangle') {
                 const dir = this.team === 'player' ? 1 : -1;
-                ctx.moveTo(this.x + (15 * dir), this.y);
-                ctx.lineTo(this.x - (10 * dir), this.y - 12);
-                ctx.lineTo(this.x - (10 * dir), this.y + 12);
+                ctx.moveTo(drawX + (15 * dir), drawY);
+                ctx.lineTo(drawX - (10 * dir), drawY - 12);
+                ctx.lineTo(drawX - (10 * dir), drawY + 12);
                 ctx.closePath(); ctx.fill(); ctx.stroke();
             } else if (this.type === 'square') {
-                ctx.rect(this.x - 14, this.y - 14, 28, 28);
+                ctx.rect(drawX - 14, drawY - 14, 28, 28);
                 ctx.fill(); ctx.stroke();
             } else if (this.type === 'diamond') {
-                ctx.moveTo(this.x, this.y - 18); ctx.lineTo(this.x + 14, this.y);
-                ctx.lineTo(this.x, this.y + 18); ctx.lineTo(this.x - 14, this.y);
+                ctx.moveTo(drawX, drawY - 18); ctx.lineTo(drawX + 14, drawY);
+                ctx.lineTo(drawX, drawY + 18); ctx.lineTo(drawX - 14, drawY);
                 ctx.closePath(); ctx.fill(); ctx.stroke();
             } else if (this.type === 'star') { 
-                drawStar(ctx, this.x, this.y, 5, 16, 8);
+                drawStar(ctx, drawX, drawY, 5, 16, 8);
                 ctx.fill(); ctx.stroke();
             } else if (this.type === 'cross') { 
-                ctx.rect(this.x - 6, this.y - 18, 12, 36);
-                ctx.rect(this.x - 18, this.y - 6, 36, 12);
+                ctx.rect(drawX - 6, drawY - 18, 12, 36);
+                ctx.rect(drawX - 18, drawY - 6, 36, 12);
                 ctx.fill(); ctx.stroke();
             } else if (this.type === 'pentagon') { 
-                drawPolygon(ctx, this.x, this.y, 18, 5);
+                drawPolygon(ctx, drawX, drawY, 18, 5);
                 ctx.fill(); ctx.stroke();
             } else if (this.type === 'hexagon') {
-                drawPolygon(ctx, this.x, this.y, 30, 6);
+                drawPolygon(ctx, drawX, drawY, 30, 6);
                 ctx.fill(); ctx.stroke();
             }
 
+            // HP Bar (원래 위치에 그림)
             const hpPercent = Math.max(0, this.hp / this.maxHp);
             const barW = (this.id === 'midboss') ? 60 : 24;
             const barY = (this.id === 'midboss') ? 45 : 28;
@@ -691,7 +659,7 @@
 
     function unlockHero() {
         if (gameState.heroUnlocked) return;
-        const cost = 50;
+        const cost = 500;
         if (gameState.gold >= cost) {
             gameState.gold -= cost;
             gameState.heroUnlocked = true;
@@ -701,26 +669,19 @@
             createUnitButton(pickedUnit);
             createDamageText(playerBase.x, playerBase.y - 100, `${pickedUnit.name} 계약!`, "#FFD700");
         } else {
-            alert("골드가 부족합니다! (필요: 50)");
+            alert("골드가 부족합니다! (필요: 500)");
         }
     }
 
-    // --- 스테이지 UI 업데이트 (New) ---
+    // --- 스테이지 UI ---
     function updateStageProgress(currentStage) {
-        // 배경 채우기 (7개 스테이지 기준)
         const fillPercent = Math.min(100, ((currentStage - 1) / 6) * 100);
         document.getElementById('progress-fill').style.width = `${fillPercent}%`;
-
-        // 점 상태 업데이트
         for (let i = 1; i <= 7; i++) {
             const dot = document.getElementById(`dot-${i}`);
             dot.classList.remove('active', 'passed');
-            
-            if (i < currentStage) {
-                dot.classList.add('passed');
-            } else if (i === currentStage) {
-                dot.classList.add('active');
-            }
+            if (i < currentStage) dot.classList.add('passed');
+            else if (i === currentStage) dot.classList.add('active');
         }
     }
 
@@ -734,8 +695,6 @@
         const sec = gameState.seconds;
         let currentStage = Math.min(7, Math.floor(sec / 35) + 1);
         gameState.stage = currentStage;
-        
-        // 스테이지 바 업데이트 호출
         updateStageProgress(currentStage);
 
         if (currentStage >= 2 && !gameState.heroUnlocked) {
@@ -900,7 +859,7 @@
     }
 
     initDeck();
-    updateStageProgress(1); // 초기화
+    updateStageProgress(1);
     requestAnimationFrame(update);
 
 </script>
