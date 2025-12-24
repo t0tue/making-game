@@ -12,8 +12,8 @@ let gameState = {
     midBossSpawned: false,
     gameOver: false,
     enemySpawnCooldown: 0,
-    heroUnlocked: false,
-    heroType: null
+    heroUnlocked: false, // 현재 영웅 뽑기 창이 닫혔는지 여부
+    heroes: []           // 보유 중인 영웅 목록 (여러 명 가능)
 };
 
 // --- 기지 데이터 ---
@@ -36,7 +36,7 @@ const specialUnits = [
 ];
 
 const midBossData = { 
-    id: 'midboss', name: '오크 대장', type: 'icon', cost: 1000, // 보스는 현상금 높게 설정
+    id: 'midboss', name: '오크 대장', type: 'icon', cost: 1000, 
     baseHp: 3000, baseDmg: 60, range: 50, speed: 0.6, 
     color: '#8e44ad', icon: '👹', level: 1
 };
@@ -68,20 +68,17 @@ class Unit {
         this.name = typeData.name;
         this.team = team;
         
-        // 현상금 설정 (유닛 비용의 20% 정도)
-        // 보스는 더 많이 줌
+        // 현상금 설정
         this.bounty = Math.floor((typeData.cost || 100) * 0.2);
-        if (this.id === 'midboss') this.bounty = 500;
+        if (this.id === 'midboss') this.bounty = 1000; // 보스 현상금 대폭 상향
 
         let stats = getUnitStats(typeData);
         
-        // 적군은 스테이지에 따라 강해짐
+        // 적군 난이도 스케일링
         if (team === 'enemy' && this.id !== 'midboss') {
             const stageMulti = 1 + (gameState.stage - 1) * 0.15;
             stats.hp *= stageMulti;
             stats.dmg *= stageMulti;
-            
-            // 스테이지가 오르면 현상금도 약간 증가
             this.bounty = Math.floor(this.bounty * (1 + (gameState.stage - 1) * 0.1));
         }
 
@@ -97,7 +94,6 @@ class Unit {
         this.attackCooldown = 0;
         this.attackAnim = 0; 
 
-        // 배치 위치 랜덤성 (겹침 방지)
         this.y = 300 + (Math.random() * 30 - 15); 
         if (team === 'player') {
             this.x = playerBase.x + 40;
@@ -112,7 +108,8 @@ class Unit {
     refreshStats() {
         if (this.team !== 'player') return;
         let typeData = unitTypes.find(u => u.id === this.id);
-        if (!typeData && gameState.heroType && gameState.heroType.id === this.id) typeData = gameState.heroType;
+        // [수정] 영웅 목록에서도 데이터 검색
+        if (!typeData) typeData = gameState.heroes.find(h => h.id === this.id);
         if (!typeData) return;
 
         const newStats = getUnitStats(typeData);
@@ -127,7 +124,6 @@ class Unit {
         if (this.attackCooldown > 0) this.attackCooldown--;
         if (this.attackAnim > 0) this.attackAnim--;
 
-        // 거상 모션
         if (this.id === 'merchant' && gameState.frame % 60 === 0) {
             this.attackAnim = 10; 
         }
@@ -135,23 +131,19 @@ class Unit {
         let target = null;
         let minDist = Infinity;
         
-        // 힐러 로직
         if (this.dmg < 0) {
             const allies = units.filter(u => u.team === this.team && u !== this && u.hp < u.maxHp);
             for (let a of allies) {
                 let dist = Math.abs(a.x - this.x);
                 if (dist < minDist) { minDist = dist; target = a; }
             }
-        } 
-        // 공격 로직
-        else {
+        } else {
             const enemies = units.filter(u => u.team !== this.team && u.hp > 0);
             for (let e of enemies) {
                 let dist = Math.abs(e.x - this.x);
                 if (dist < minDist) { minDist = dist; target = e; }
             }
             
-            // 기지 공격
             if (this.id !== 'merchant') {
                 let baseTarget = (this.team === 'player') ? enemyBase : playerBase;
                 let distToBase = Math.abs(baseTarget.x - this.x);
@@ -173,7 +165,6 @@ class Unit {
                 }
             }
         } else {
-            // 이동
             this.x += this.speed * this.direction;
             if (this.x < 15) this.x = 15;
             if (this.x > canvas.width - 15) this.x = canvas.width - 15;
@@ -184,7 +175,6 @@ class Unit {
         this.attackAnim = 15; 
 
         let actualDmg = this.dmg;
-        // 장군 버프
         if (actualDmg > 0 && this.team === 'player') {
             const hasGeneral = units.some(u => u.team === 'player' && u.id === 'general' && Math.abs(u.x - this.x) < u.effectRange);
             if (hasGeneral) actualDmg *= 1.5; 
@@ -213,7 +203,6 @@ class Unit {
         if (this.attackAnim > 0) {
             const p = this.attackAnim / 15; 
             const amount = 8; 
-            
             if (['sword', 'tank', 'midboss', 'general'].includes(this.id)) {
                 animOffsetX = Math.sin(p * Math.PI) * amount * this.direction;
             } else if (this.id === 'merchant') {
@@ -230,7 +219,6 @@ class Unit {
         ctx.translate(drawX, drawY);
         ctx.scale(this.direction, 1); 
 
-        // 그림자
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
         ctx.ellipse(0, 12, 8, 3, 0, 0, Math.PI*2);
@@ -301,9 +289,8 @@ function initDeck() {
     const deckContainer = document.getElementById('deck-container');
     deckContainer.innerHTML = '';
     unitTypes.forEach(unit => createUnitButton(unit));
-    if (gameState.heroUnlocked && gameState.heroType) {
-        createUnitButton(gameState.heroType);
-    }
+    // 이미 뽑은 영웅이 있다면 버튼 표시
+    gameState.heroes.forEach(hero => createUnitButton(hero));
 }
 
 function createUnitButton(unit) {
@@ -375,7 +362,8 @@ function refreshCardUI(unit) {
 function buyUnit(unitId) {
     if (gameState.gameOver) return;
     let unitData = unitTypes.find(u => u.id === unitId);
-    if (!unitData && gameState.heroType && gameState.heroType.id === unitId) unitData = gameState.heroType;
+    // [수정] 영웅 목록 확인
+    if (!unitData) unitData = gameState.heroes.find(h => h.id === unitId);
     if (!unitData) return;
     if (playerCooldowns[unitData.id] > 0) return;
 
@@ -390,6 +378,7 @@ function buyUnit(unitId) {
 function buyUpgrade(unitId) {
     if (gameState.gameOver) return;
     let unitData = unitTypes.find(u => u.id === unitId);
+    if (!unitData) unitData = gameState.heroes.find(h => h.id === unitId); // 영웅 강화도 가능하도록
     if (!unitData) return;
     if (unitData.level >= unitData.maxLevel) return;
 
@@ -406,15 +395,29 @@ function buyUpgrade(unitId) {
     }
 }
 
+// [수정] 영웅 뽑기 로직 (중복 방지 및 추가 고용)
 function unlockHero() {
     if (gameState.heroUnlocked) return;
     const cost = 500;
+    
+    // 이미 보유한 영웅 제외하고 뽑기
+    const availableHeroes = specialUnits.filter(su => !gameState.heroes.some(h => h.id === su.id));
+    
+    if (availableHeroes.length === 0) {
+        alert("모든 영웅을 고용했습니다!");
+        document.getElementById('unlock-btn-container').style.display = 'none';
+        return;
+    }
+
     if (gameState.gold >= cost) {
         gameState.gold -= cost;
-        gameState.heroUnlocked = true;
+        gameState.heroUnlocked = true; // 버튼 숨김 플래그
+        
         document.getElementById('unlock-btn-container').style.display = 'none';
-        const pickedUnit = specialUnits[Math.floor(Math.random() * specialUnits.length)];
-        gameState.heroType = pickedUnit;
+        
+        const pickedUnit = availableHeroes[Math.floor(Math.random() * availableHeroes.length)];
+        gameState.heroes.push(pickedUnit); // 리스트에 추가
+        
         createUnitButton(pickedUnit);
         createDamageText(playerBase.x, playerBase.y - 100, `${pickedUnit.name} 계약!`, "#FFD700");
     } else {
@@ -445,7 +448,8 @@ function spawnEnemyAI() {
     gameState.stage = currentStage;
     updateStageProgress(currentStage);
 
-    if (currentStage >= 2 && !gameState.heroUnlocked) {
+    // 영웅 뽑기 버튼 최초 활성화 (2스테이지 이상, 아직 영웅 없을 때)
+    if (currentStage >= 2 && gameState.heroes.length === 0 && !gameState.heroUnlocked) {
         document.getElementById('unlock-btn-container').style.display = 'block';
     }
 
@@ -498,7 +502,11 @@ function update() {
     gameState.frame++;
     if (gameState.frame % 60 === 0) {
         gameState.seconds++;
-        document.getElementById('game-timer').innerText = `시간: 00:${gameState.seconds.toString().padStart(2, '0')}`;
+        // [수정] 시간 표시 포맷 수정 (MM:SS)
+        const mins = Math.floor(gameState.seconds / 60);
+        const secs = gameState.seconds % 60;
+        const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        document.getElementById('game-timer').innerText = `시간: ${timeStr}`;
     }
 
     const merchantCount = units.filter(u => u.team === 'player' && u.id === 'merchant' && u.hp > 0).length;
@@ -511,17 +519,25 @@ function update() {
 
     units.forEach(u => u.update());
 
-    // [수정됨] 유닛 사망 처리 및 골드 보상 로직
+    // 유닛 사망 처리
     units = units.filter(u => {
         if (u.hp <= 0) {
-            // 적군 사망 시 보상 지급
             if (u.team === 'enemy') {
                 gameState.gold += u.bounty;
-                createDamageText(u.x, u.y - 20, `+${u.bounty}G`, "#f1c40f"); // 노란색 돈 텍스트
+                createDamageText(u.x, u.y - 20, `+${u.bounty}G`, "#f1c40f");
+                
+                // [수정] 중간 보스 처치 시 영웅 뽑기 기회 제공
+                if (u.id === 'midboss') {
+                    createDamageText(canvas.width/2, canvas.height/2, "영웅 고용권 획득!", "#FFD700");
+                    gameState.heroUnlocked = false; // 버튼 다시 활성화
+                    const btnContainer = document.getElementById('unlock-btn-container');
+                    btnContainer.style.display = 'block';
+                    btnContainer.querySelector('button').innerHTML = "<span>🦸 영웅 추가 고용</span><span>500 G</span>";
+                }
             }
-            return false; // 배열에서 제거
+            return false; 
         }
-        return true; // 생존
+        return true; 
     });
     
     spawnEnemyAI();
@@ -538,7 +554,7 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 바닥(땅) 그리기
+    // 바닥
     ctx.fillStyle = '#2c3e50';
     ctx.fillRect(0, 260, canvas.width, 80);
     ctx.strokeStyle = '#34495e';
@@ -576,7 +592,8 @@ function updateUI() {
     const enemyHpPercent = Math.floor((enemyBase.hp / enemyBase.maxHp) * 100);
     document.getElementById('enemy-hp').innerText = Math.max(0, enemyHpPercent);
 
-    [...unitTypes, ...(gameState.heroType ? [gameState.heroType] : [])].forEach(u => {
+    // [수정] 영웅 목록도 순회하며 UI 갱신
+    [...unitTypes, ...gameState.heroes].forEach(u => {
         const btn = document.getElementById(`card-${u.id}`);
         if (!btn) return;
         
@@ -620,7 +637,7 @@ function endGame(msg) {
     document.getElementById('result-message').innerText = msg;
 }
 
-// --- 유닛 아이콘 그리기 함수 (Canvas Drawing) ---
+// --- 유닛 아이콘 그리기 함수 ---
 function drawUnitIcon(ctx, id, team, color) {
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
@@ -749,7 +766,6 @@ function drawUnitIcon(ctx, id, team, color) {
     }
 }
 
-// 게임 시작
 initDeck();
 updateStageProgress(1);
 requestAnimationFrame(update);
