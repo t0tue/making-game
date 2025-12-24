@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>공성전: 포격 개시</title>
+    <title>공성전: 군단 강화</title>
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
@@ -16,16 +16,71 @@
             user-select: none;
         }
 
-        h1 { margin: 5px 0; text-shadow: 0 0 10px rgba(255,255,255,0.3); font-size: 24px; }
+        h1 { margin: 5px 0 15px 0; text-shadow: 0 0 10px rgba(255,255,255,0.3); font-size: 24px; }
 
-        #stage-display {
-            font-size: 28px;
-            font-weight: 900;
-            color: #e67e22;
-            text-shadow: 2px 2px 0px #000;
-            margin-bottom: 5px;
-            letter-spacing: 2px;
+        /* --- 스테이지 진행 바 스타일 시작 --- */
+        .progress-container {
+            width: 400px;
+            height: 40px;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
+
+        /* 배경 선 */
+        .progress-track {
+            position: absolute;
+            top: 50%; left: 0;
+            width: 100%; height: 4px;
+            background: #444;
+            transform: translateY(-50%);
+            z-index: 0;
+            border-radius: 2px;
+        }
+
+        /* 채워지는 선 (진행도) */
+        .progress-fill {
+            position: absolute;
+            top: 50%; left: 0;
+            height: 4px;
+            background: #e67e22;
+            transform: translateY(-50%);
+            z-index: 0;
+            width: 0%; /* JS로 제어 */
+            transition: width 0.5s ease;
+        }
+
+        /* 점 (Dot) */
+        .stage-dot {
+            width: 16px; height: 16px;
+            background: #2c3e50;
+            border: 3px solid #555;
+            border-radius: 50%;
+            z-index: 1;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 10px; font-weight: bold; color: transparent;
+        }
+
+        /* 지나온 스테이지 */
+        .stage-dot.passed {
+            background: #e67e22;
+            border-color: #e67e22;
+        }
+
+        /* 현재 스테이지 */
+        .stage-dot.active {
+            width: 24px; height: 24px;
+            background: #d35400;
+            border-color: #fff;
+            box-shadow: 0 0 15px #e67e22;
+            transform: scale(1.2);
+            color: #fff; /* 현재 스테이지 숫자 표시 */
+        }
+        /* --- 스테이지 진행 바 스타일 끝 --- */
 
         #game-info {
             width: 840px;
@@ -68,10 +123,8 @@
 
         #deck-container { display: flex; gap: 6px; }
 
-        /* 카드 스타일 */
         .card {
-            width: 95px; /* 폭을 약간 줄여서 대포 공간 확보 */
-            height: 230px;
+            width: 95px; height: 230px;
             background: #34495e;
             border: 3px solid transparent;
             border-radius: 10px;
@@ -86,11 +139,9 @@
         .card.hero-card { border-color: #FFD700; background: #2c2c2c; }
 
         .spawn-zone {
-            width: 100%;
-            height: 160px;
+            width: 100%; height: 160px;
             display: flex; flex-direction: column; align-items: center;
-            cursor: pointer;
-            z-index: 2;
+            cursor: pointer; z-index: 2;
         }
         .spawn-zone:hover { background: rgba(255,255,255,0.05); }
         .spawn-zone:active { transform: scale(0.98); }
@@ -165,7 +216,18 @@
 </head>
 <body>
 
-    <div id="stage-display">STAGE 1</div>
+    <div class="progress-container">
+        <div class="progress-track"></div>
+        <div class="progress-fill" id="progress-fill"></div>
+        <div class="stage-dot" id="dot-1">1</div>
+        <div class="stage-dot" id="dot-2">2</div>
+        <div class="stage-dot" id="dot-3">3</div>
+        <div class="stage-dot" id="dot-4">4</div>
+        <div class="stage-dot" id="dot-5">5</div>
+        <div class="stage-dot" id="dot-6">6</div>
+        <div class="stage-dot" id="dot-7">7</div>
+    </div>
+
     <h1>🏰 공성전: 포격 개시</h1>
 
     <div id="game-info">
@@ -221,7 +283,6 @@
     const enemyBase = { x: 780, y: 200, hp: 5000, maxHp: 5000, color: '#e74c3c' };
 
     // --- 유닛 데이터 ---
-    // Cannon(대포) 추가: speed 0, range 400 (매우 김)
     const unitTypes = [
         { id: 'sword', name: '검병', desc: '근접 기본', type: 'circle', cost: 50, baseHp: 120, baseDmg: 10, range: 35, speed: 1.5, color: '#ecf0f1', icon: '⚔️', cooldown: 30, level: 1, maxLevel: 10, upgradeCostBase: 100 },
         { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'triangle', cost: 130, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 200 },
@@ -284,14 +345,12 @@
             this.effectRange = typeData.effectRange || 0; 
             this.radius = (this.id === 'midboss') ? 30 : 16; 
             
-            // 공격 쿨타임 (대포는 더 느리게)
             this.maxAttackCooldown = (this.id === 'cannon') ? 100 : 50;
             this.attackCooldown = 0;
 
             this.y = 300 + (Math.random() * 30 - 15); 
             if (team === 'player') {
                 this.x = playerBase.x + 40;
-                // 대포는 약간 뒤쪽에서 덜 겹치게
                 if(this.id === 'cannon') this.x = playerBase.x + 20 + (Math.random()*10); 
                 this.direction = 1;
             } else {
@@ -320,26 +379,22 @@
             let target = null;
             let minDist = Infinity;
             
-            if (this.dmg < 0) { // 힐러
+            if (this.dmg < 0) {
                 const allies = units.filter(u => u.team === this.team && u !== this && u.hp < u.maxHp);
                 for (let a of allies) {
                     let dist = Math.abs(a.x - this.x);
                     if (dist < minDist) { minDist = dist; target = a; }
                 }
-            } else { // 딜러
+            } else {
                 const enemies = units.filter(u => u.team !== this.team && u.hp > 0);
                 for (let e of enemies) {
                     let dist = Math.abs(e.x - this.x);
-                    // 대포는 사거리가 기니까 가장 가까운 적을 우선
                     if (dist < minDist) { minDist = dist; target = e; }
                 }
                 
-                // 적 유닛이 없으면 기지 타격 (대포는 사거리 안닿으면 못 때림)
                 if (this.id !== 'merchant') {
                     let baseTarget = (this.team === 'player') ? enemyBase : playerBase;
                     let distToBase = Math.abs(baseTarget.x - this.x);
-                    
-                    // 대포가 아니거나, 대포 사거리 내에 기지가 있으면 타겟 가능
                     if (this.id !== 'cannon' || distToBase <= this.range) {
                         if (distToBase < minDist) { target = baseTarget; minDist = distToBase; }
                     }
@@ -350,7 +405,6 @@
             let checkRange = this.range + (this.id === 'midboss' ? 20 : 0);
             if (target && minDist <= checkRange) inRange = true;
 
-            // 이동 로직 (speed가 0이면 안 움직임)
             if (inRange) {
                 if (this.attackCooldown <= 0) {
                     if (this.dmg !== 0) {
@@ -373,8 +427,7 @@
             }
 
             if (this.id === 'cannon') {
-                // 대포 이펙트 (포탄 날아가는 느낌)
-                createParticle(this.x, this.y, '#555', 8); // 연기
+                createParticle(this.x, this.y, '#555', 8); 
                 createDamageText(this.x, this.y - 40, "BOOM!", "#f39c12");
             }
 
@@ -390,7 +443,6 @@
         }
 
         draw() {
-            // 오라 그리기
             if (this.team === 'player') {
                 if (this.id === 'general') {
                     ctx.beginPath(); ctx.fillStyle = 'rgba(230, 126, 34, 0.1)';
@@ -411,22 +463,19 @@
             ctx.lineWidth = 2;
             ctx.strokeStyle = '#fff';
             
-            // 도형 그리기
             ctx.beginPath();
             if (this.type === 'cannon') {
-                // 대포: 바퀴 + 포신
-                ctx.fillStyle = '#7f8c8d'; // 바퀴색
-                ctx.arc(this.x, this.y + 8, 10, 0, Math.PI * 2); // 바퀴
+                ctx.fillStyle = '#7f8c8d';
+                ctx.arc(this.x, this.y + 8, 10, 0, Math.PI * 2);
                 ctx.fill(); ctx.stroke();
                 
                 ctx.beginPath();
-                ctx.fillStyle = '#2c3e50'; // 포신색
-                // 포신 각도
+                ctx.fillStyle = '#2c3e50';
                 const angle = this.team === 'player' ? -0.3 : 0.3;
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.rotate(angle);
-                ctx.rect(-5, -25, 10, 30); // 긴 직사각형
+                ctx.rect(-5, -25, 10, 30);
                 ctx.fill(); ctx.stroke();
                 ctx.restore();
 
@@ -461,7 +510,6 @@
                 ctx.fill(); ctx.stroke();
             }
 
-            // HP Bar
             const hpPercent = Math.max(0, this.hp / this.maxHp);
             const barW = (this.id === 'midboss') ? 60 : 24;
             const barY = (this.id === 'midboss') ? 45 : 28;
@@ -657,6 +705,25 @@
         }
     }
 
+    // --- 스테이지 UI 업데이트 (New) ---
+    function updateStageProgress(currentStage) {
+        // 배경 채우기 (7개 스테이지 기준)
+        const fillPercent = Math.min(100, ((currentStage - 1) / 6) * 100);
+        document.getElementById('progress-fill').style.width = `${fillPercent}%`;
+
+        // 점 상태 업데이트
+        for (let i = 1; i <= 7; i++) {
+            const dot = document.getElementById(`dot-${i}`);
+            dot.classList.remove('active', 'passed');
+            
+            if (i < currentStage) {
+                dot.classList.add('passed');
+            } else if (i === currentStage) {
+                dot.classList.add('active');
+            }
+        }
+    }
+
     // --- 게임 로직 ---
     function spawnEnemyAI() {
         if (gameState.enemySpawnCooldown > 0) {
@@ -667,7 +734,9 @@
         const sec = gameState.seconds;
         let currentStage = Math.min(7, Math.floor(sec / 35) + 1);
         gameState.stage = currentStage;
-        document.getElementById('stage-display').innerText = `STAGE ${currentStage}`;
+        
+        // 스테이지 바 업데이트 호출
+        updateStageProgress(currentStage);
 
         if (currentStage >= 2 && !gameState.heroUnlocked) {
             document.getElementById('unlock-btn-container').style.display = 'block';
@@ -700,11 +769,9 @@
         document.getElementById('enemy-status').innerText = statusText;
 
         const randomUnit = availableUnits[Math.floor(Math.random() * availableUnits.length)];
-        // 적군은 대포 소환 안함 (밸런스)
         if (randomUnit.id !== 'cannon') {
             units.push(new Unit(randomUnit, 'enemy'));
         } else {
-            // 대포가 걸리면 검병 소환
             units.push(new Unit(unitTypes[0], 'enemy'));
         }
 
@@ -833,6 +900,7 @@
     }
 
     initDeck();
+    updateStageProgress(1); // 초기화
     requestAnimationFrame(update);
 
 </script>
