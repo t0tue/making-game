@@ -12,8 +12,7 @@ let gameState = {
     midBossSpawned: false,
     gameOver: false,
     enemySpawnCooldown: 0,
-    heroUnlocked: false, // 현재 영웅 뽑기 창이 닫혔는지 여부
-    heroes: []           // 보유 중인 영웅 목록 (여러 명 가능)
+    heroes: [] // 보유 중인 영웅 목록
 };
 
 // --- 기지 데이터 ---
@@ -30,9 +29,9 @@ const unitTypes = [
 ];
 
 const specialUnits = [
-    { id: 'merchant', name: '거상', desc: '수입 증가', type: 'icon', cost: 300, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1 },
-    { id: 'healer', name: '사제', desc: '아군 치유', type: 'icon', cost: 350, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1 },
-    { id: 'general', name: '장군', desc: '공격력 버프', type: 'icon', cost: 500, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1 }
+    { id: 'merchant', name: '거상', desc: '수입 증가', type: 'icon', cost: 300, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1, maxLevel: 5, upgradeCostBase: 500 },
+    { id: 'healer', name: '사제', desc: '아군 치유', type: 'icon', cost: 350, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1, maxLevel: 5, upgradeCostBase: 500 },
+    { id: 'general', name: '장군', desc: '공격력 버프', type: 'icon', cost: 500, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1, maxLevel: 5, upgradeCostBase: 500 }
 ];
 
 const midBossData = { 
@@ -70,7 +69,7 @@ class Unit {
         
         // 현상금 설정
         this.bounty = Math.floor((typeData.cost || 100) * 0.2);
-        if (this.id === 'midboss') this.bounty = 1000; // 보스 현상금 대폭 상향
+        if (this.id === 'midboss') this.bounty = 1000;
 
         let stats = getUnitStats(typeData);
         
@@ -108,7 +107,6 @@ class Unit {
     refreshStats() {
         if (this.team !== 'player') return;
         let typeData = unitTypes.find(u => u.id === this.id);
-        // [수정] 영웅 목록에서도 데이터 검색
         if (!typeData) typeData = gameState.heroes.find(h => h.id === this.id);
         if (!typeData) return;
 
@@ -256,7 +254,7 @@ function createParticle(x, y, color, size=3) {
 function createDamageText(x, y, text, color) {
     damageTexts.push({
         x: x, y: y, text: text, color: color || "white",
-        life: 40, maxLife: 40, vy: -1.5
+        life: 60, maxLife: 60, vy: -1.0
     });
 }
 
@@ -289,12 +287,15 @@ function initDeck() {
     const deckContainer = document.getElementById('deck-container');
     deckContainer.innerHTML = '';
     unitTypes.forEach(unit => createUnitButton(unit));
-    // 이미 뽑은 영웅이 있다면 버튼 표시
+    // 보유 중인 영웅 버튼 표시
     gameState.heroes.forEach(hero => createUnitButton(hero));
 }
 
 function createUnitButton(unit) {
     const deckContainer = document.getElementById('deck-container');
+    // 중복 생성 방지
+    if(document.getElementById(`card-${unit.id}`)) return;
+
     if(!playerCooldowns[unit.id]) playerCooldowns[unit.id] = 0;
     
     const stats = getUnitStats(unit);
@@ -304,7 +305,7 @@ function createUnitButton(unit) {
     else if (unit.id === 'merchant') { atkDisplay = "-"; atkIcon = "❌"; }
 
     const card = document.createElement('div');
-    card.className = `card ${unit.id === 'merchant' || unit.id === 'general' || unit.id === 'healer' ? 'hero-card' : ''}`;
+    card.className = `card ${['merchant','general','healer'].includes(unit.id) ? 'hero-card' : ''}`;
     card.id = `card-${unit.id}`;
     card.style.borderBottom = `4px solid ${unit.color}`;
     
@@ -339,15 +340,19 @@ function createUnitButton(unit) {
 }
 
 function refreshCardUI(unit) {
+    const card = document.getElementById(`card-${unit.id}`);
+    if (!card) return;
+
     const stats = getUnitStats(unit);
-    document.getElementById(`hp-${unit.id}`).innerText = stats.hp;
+    card.querySelector(`#hp-${unit.id}`).innerText = stats.hp;
+    
     let atkDisplay = stats.dmg;
     if (unit.id === 'healer') atkDisplay = Math.abs(stats.dmg);
     else if (unit.id === 'merchant') atkDisplay = "-";
-    document.getElementById(`dmg-${unit.id}`).innerText = atkDisplay;
+    card.querySelector(`#dmg-${unit.id}`).innerText = atkDisplay;
 
     if (unit.maxLevel) {
-        document.getElementById(`badge-${unit.id}`).innerText = `Lv.${unit.level}`;
+        card.querySelector(`#badge-${unit.id}`).innerText = `Lv.${unit.level}`;
         const btn = document.getElementById(`upbtn-${unit.id}`);
         if (unit.level >= unit.maxLevel) {
             btn.innerHTML = `<span>MAX</span>`;
@@ -362,7 +367,6 @@ function refreshCardUI(unit) {
 function buyUnit(unitId) {
     if (gameState.gameOver) return;
     let unitData = unitTypes.find(u => u.id === unitId);
-    // [수정] 영웅 목록 확인
     if (!unitData) unitData = gameState.heroes.find(h => h.id === unitId);
     if (!unitData) return;
     if (playerCooldowns[unitData.id] > 0) return;
@@ -378,7 +382,7 @@ function buyUnit(unitId) {
 function buyUpgrade(unitId) {
     if (gameState.gameOver) return;
     let unitData = unitTypes.find(u => u.id === unitId);
-    if (!unitData) unitData = gameState.heroes.find(h => h.id === unitId); // 영웅 강화도 가능하도록
+    if (!unitData) unitData = gameState.heroes.find(h => h.id === unitId);
     if (!unitData) return;
     if (unitData.level >= unitData.maxLevel) return;
 
@@ -395,35 +399,84 @@ function buyUpgrade(unitId) {
     }
 }
 
-// [수정] 영웅 뽑기 로직 (중복 방지 및 추가 고용)
-function unlockHero() {
-    if (gameState.heroUnlocked) return;
-    const cost = 500;
-    
-    // 이미 보유한 영웅 제외하고 뽑기
-    const availableHeroes = specialUnits.filter(su => !gameState.heroes.some(h => h.id === su.id));
-    
-    if (availableHeroes.length === 0) {
-        alert("모든 영웅을 고용했습니다!");
-        document.getElementById('unlock-btn-container').style.display = 'none';
+// [수정됨] 확률형 랜덤 박스 (가챠)
+function playGacha() {
+    const cost = 200; // 궁수(130)보다 조금 높은 가격
+    if (gameState.gold < cost) {
+        alert("골드가 부족합니다! (필요: 200G)");
         return;
     }
+    
+    gameState.gold -= cost;
+    
+    // 이펙트
+    createDamageText(playerBase.x, playerBase.y - 220, "랜덤 박스 개봉!", "white");
 
-    if (gameState.gold >= cost) {
-        gameState.gold -= cost;
-        gameState.heroUnlocked = true; // 버튼 숨김 플래그
+    const rand = Math.random() * 100; // 0 ~ 100
+    
+    // 1. 특수 영웅 획득 (15%)
+    if (rand < 15) {
+        const heroPool = specialUnits;
+        const picked = heroPool[Math.floor(Math.random() * heroPool.length)];
         
-        document.getElementById('unlock-btn-container').style.display = 'none';
+        // 이미 보유 중인지 확인
+        const existing = gameState.heroes.find(h => h.id === picked.id);
+        if (existing) {
+            // 보유 중이면 레벨업
+            if (existing.level < existing.maxLevel) {
+                existing.level++;
+                refreshCardUI(existing);
+                createDamageText(playerBase.x, playerBase.y - 100, `💎 대박! ${picked.name} 레벨업!`, "#FFD700");
+            } else {
+                // 만렙이면 돈으로 대체
+                gameState.gold += 500;
+                createDamageText(playerBase.x, playerBase.y - 100, `💎 이미 만렙! +500G`, "#FFD700");
+            }
+        } else {
+            // 신규 획득
+            // 깊은 복사로 새 객체 생성
+            const newHero = JSON.parse(JSON.stringify(picked));
+            gameState.heroes.push(newHero);
+            createUnitButton(newHero);
+            createDamageText(playerBase.x, playerBase.y - 100, `💎 대박! ${newHero.name} 획득!`, "#FFD700");
+        }
+    } 
+    // 2. 재화 당첨 (35%)
+    else if (rand < 50) {
+        const goldRand = Math.random();
+        let reward = 0;
+        let msg = "";
         
-        const pickedUnit = availableHeroes[Math.floor(Math.random() * availableHeroes.length)];
-        gameState.heroes.push(pickedUnit); // 리스트에 추가
+        if (goldRand < 0.4) { reward = 100; msg = "아쉽네요.."; } // 꽝 (손해)
+        else if (goldRand < 0.8) { reward = 300; msg = "💰 용돈 획득!"; } // 본전 이상
+        else { reward = 600; msg = "💰💰 복권 당첨!!"; } // 대박
         
-        createUnitButton(pickedUnit);
-        createDamageText(playerBase.x, playerBase.y - 100, `${pickedUnit.name} 계약!`, "#FFD700");
-    } else {
-        alert("골드가 부족합니다! (필요: 500)");
+        gameState.gold += reward;
+        createDamageText(playerBase.x, playerBase.y - 100, `${msg} +${reward}G`, "#f1c40f");
     }
+    // 3. 일반 유닛 강화 (50%)
+    else {
+        // 잠금 해제되지 않았거나 만렙인 유닛 제외
+        // 여기서는 기본 유닛 중 하나 랜덤 강화
+        const targetUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
+        
+        if (targetUnit.level < targetUnit.maxLevel) {
+            targetUnit.level++;
+            refreshCardUI(targetUnit);
+            units.forEach(u => {
+                if (u.id === targetUnit.id && u.team === 'player') u.refreshStats();
+            });
+            createDamageText(playerBase.x, playerBase.y - 100, `🆙 ${targetUnit.name} 무료 강화!`, "#2ecc71");
+        } else {
+            // 모두 만렙이면 골드 반환
+            gameState.gold += 200;
+            createDamageText(playerBase.x, playerBase.y - 100, `모두 만렙이라 환불`, "#aaa");
+        }
+    }
+    
+    updateUI();
 }
+
 
 // --- 스테이지 관리 ---
 function updateStageProgress(currentStage) {
@@ -448,9 +501,14 @@ function spawnEnemyAI() {
     gameState.stage = currentStage;
     updateStageProgress(currentStage);
 
-    // 영웅 뽑기 버튼 최초 활성화 (2스테이지 이상, 아직 영웅 없을 때)
-    if (currentStage >= 2 && gameState.heroes.length === 0 && !gameState.heroUnlocked) {
+    // 2스테이지부터 뽑기 버튼 활성화
+    if (currentStage >= 2) {
         document.getElementById('unlock-btn-container').style.display = 'block';
+        // 버튼 텍스트 업데이트
+        const btn = document.querySelector('#unlock-btn-container button');
+        btn.onclick = playGacha; // 함수 연결
+        btn.innerHTML = `<span>🎲 랜덤 보급품</span><span style="font-size:12px">200 G</span>`;
+        btn.style.background = "linear-gradient(to bottom, #9b59b6, #8e44ad)";
     }
 
     if (currentStage === 4 && !gameState.midBossSpawned) {
@@ -502,7 +560,6 @@ function update() {
     gameState.frame++;
     if (gameState.frame % 60 === 0) {
         gameState.seconds++;
-        // [수정] 시간 표시 포맷 수정 (MM:SS)
         const mins = Math.floor(gameState.seconds / 60);
         const secs = gameState.seconds % 60;
         const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -526,13 +583,10 @@ function update() {
                 gameState.gold += u.bounty;
                 createDamageText(u.x, u.y - 20, `+${u.bounty}G`, "#f1c40f");
                 
-                // [수정] 중간 보스 처치 시 영웅 뽑기 기회 제공
+                // 중간 보스 처치 시 대량의 골드 지급 (뽑기 3번 분량)
                 if (u.id === 'midboss') {
-                    createDamageText(canvas.width/2, canvas.height/2, "영웅 고용권 획득!", "#FFD700");
-                    gameState.heroUnlocked = false; // 버튼 다시 활성화
-                    const btnContainer = document.getElementById('unlock-btn-container');
-                    btnContainer.style.display = 'block';
-                    btnContainer.querySelector('button').innerHTML = "<span>🦸 영웅 추가 고용</span><span>500 G</span>";
+                    gameState.gold += 600;
+                    createDamageText(canvas.width/2, canvas.height/2, "보스 처치 보상 +600G!", "#FFD700");
                 }
             }
             return false; 
@@ -570,20 +624,62 @@ function draw() {
     updateAndDrawEffects();
 }
 
+// [수정됨] 기지 디자인 개선 함수
 function drawBase(base, label) {
-    ctx.fillStyle = base.color;
-    ctx.fillRect(base.x - 40, base.y - 60, 80, 120);
-    
+    // 아군 기지: 파란 성(Castle)
+    if (label === '아군') {
+        // 본체
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(base.x - 30, base.y - 80, 60, 100);
+        // 지붕
+        ctx.beginPath();
+        ctx.moveTo(base.x - 40, base.y - 80);
+        ctx.lineTo(base.x, base.y - 120);
+        ctx.lineTo(base.x + 40, base.y - 80);
+        ctx.fillStyle = '#2980b9';
+        ctx.fill();
+        // 깃발
+        ctx.beginPath();
+        ctx.moveTo(base.x, base.y - 120);
+        ctx.lineTo(base.x, base.y - 140);
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(base.x, base.y - 140, 20, 10);
+        // 창문
+        ctx.fillStyle = '#2c3e50';
+        ctx.fillRect(base.x - 10, base.y - 60, 20, 20);
+    } 
+    // 적군 기지: 붉은 요새(Fortress)
+    else {
+        // 본체
+        ctx.fillStyle = '#c0392b';
+        ctx.fillRect(base.x - 30, base.y - 70, 60, 90);
+        // 뿔 장식 (지붕 대신)
+        ctx.beginPath();
+        ctx.moveTo(base.x - 30, base.y - 70); ctx.lineTo(base.x - 20, base.y - 100); ctx.lineTo(base.x - 10, base.y - 70);
+        ctx.moveTo(base.x - 10, base.y - 70); ctx.lineTo(base.x, base.y - 110); ctx.lineTo(base.x + 10, base.y - 70);
+        ctx.moveTo(base.x + 10, base.y - 70); ctx.lineTo(base.x + 20, base.y - 100); ctx.lineTo(base.x + 30, base.y - 70);
+        ctx.fillStyle = '#7f8c8d';
+        ctx.fill();
+        // 해골 입 모양 문
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(base.x, base.y - 20, 15, Math.PI, 0); 
+        ctx.fill();
+    }
+
+    // 체력바
     const hpPercent = Math.max(0, base.hp / base.maxHp);
     ctx.fillStyle = '#333';
-    ctx.fillRect(base.x - 40, base.y - 90, 80, 10);
+    ctx.fillRect(base.x - 40, base.y - 150, 80, 10);
     ctx.fillStyle = hpPercent > 0.5 ? '#2ecc71' : '#e74c3c';
-    ctx.fillRect(base.x - 40, base.y - 90, 80 * hpPercent, 10);
+    ctx.fillRect(base.x - 40, base.y - 150, 80 * hpPercent, 10);
     
     ctx.fillStyle = 'white';
     ctx.font = '12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(label, base.x, base.y - 100);
+    ctx.fillText(label, base.x, base.y - 160);
 }
 
 function updateUI() {
@@ -592,7 +688,6 @@ function updateUI() {
     const enemyHpPercent = Math.floor((enemyBase.hp / enemyBase.maxHp) * 100);
     document.getElementById('enemy-hp').innerText = Math.max(0, enemyHpPercent);
 
-    // [수정] 영웅 목록도 순회하며 UI 갱신
     [...unitTypes, ...gameState.heroes].forEach(u => {
         const btn = document.getElementById(`card-${u.id}`);
         if (!btn) return;
@@ -623,11 +718,13 @@ function updateUI() {
         }
     });
     
-    const unlockBtn = document.getElementById('unlock-btn');
-    if (gameState.gold < 500) {
-        unlockBtn.style.opacity = '0.6';
-    } else {
-        unlockBtn.style.opacity = '1.0';
+    const unlockBtn = document.querySelector('#unlock-btn-container button');
+    if (unlockBtn) {
+        if (gameState.gold < 200) {
+            unlockBtn.style.opacity = '0.6';
+        } else {
+            unlockBtn.style.opacity = '1.0';
+        }
     }
 }
 
@@ -637,7 +734,7 @@ function endGame(msg) {
     document.getElementById('result-message').innerText = msg;
 }
 
-// --- 유닛 아이콘 그리기 함수 ---
+// --- 유닛 아이콘 그리기 ---
 function drawUnitIcon(ctx, id, team, color) {
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
@@ -648,120 +745,49 @@ function drawUnitIcon(ctx, id, team, color) {
     switch (id) {
         case 'sword': // ⚔️
             ctx.fillStyle = '#ecf0f1';
-            ctx.beginPath();
-            ctx.moveTo(-6, 4); ctx.lineTo(12, 0); ctx.lineTo(-6, -4);
-            ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-6, 4); ctx.lineTo(12, 0); ctx.lineTo(-6, -4); ctx.fill(); ctx.stroke();
             ctx.strokeStyle = '#e67e22';
-            ctx.beginPath();
-            ctx.moveTo(-6, 6); ctx.lineTo(-6, -6);
-            ctx.moveTo(-6, 0); ctx.lineTo(-12, 0);
-            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(-6, -6); ctx.moveTo(-6, 0); ctx.lineTo(-12, 0); ctx.stroke();
             break;
-
         case 'archer': // 🏹
-            ctx.strokeStyle = '#8e44ad';
-            ctx.beginPath();
-            ctx.arc(-5, 0, 12, -Math.PI/2, Math.PI/2); 
-            ctx.stroke();
-            ctx.strokeStyle = '#ecf0f1';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(-5, -12); ctx.lineTo(-5, 12);
-            ctx.stroke();
-            ctx.strokeStyle = '#e74c3c';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-8, 0); ctx.lineTo(8, 0);
-            ctx.stroke();
+            ctx.strokeStyle = '#8e44ad'; ctx.beginPath(); ctx.arc(-5, 0, 12, -Math.PI/2, Math.PI/2); ctx.stroke();
+            ctx.strokeStyle = '#ecf0f1'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5, -12); ctx.lineTo(-5, 12); ctx.stroke();
+            ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
             break;
-
         case 'tank': // 🛡️
-            ctx.fillStyle = color;
-            ctx.strokeStyle = '#fff';
-            ctx.beginPath();
-            ctx.moveTo(-8, -10); ctx.lineTo(8, -10);
-            ctx.lineTo(8, 2);
-            ctx.quadraticCurveTo(0, 12, -8, 2);
-            ctx.closePath();
-            ctx.fill(); ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(0, -6); ctx.lineTo(0, 6);
-            ctx.moveTo(-4, 0); ctx.lineTo(4, 0);
-            ctx.stroke();
+            ctx.fillStyle = color; ctx.strokeStyle = '#fff';
+            ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(8, -10); ctx.lineTo(8, 2); ctx.quadraticCurveTo(0, 12, -8, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, 6); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.stroke();
             break;
-
         case 'wizard': // 🔮
-            ctx.strokeStyle = '#8e44ad';
-            ctx.beginPath();
-            ctx.moveTo(4, 10); ctx.lineTo(-4, -10);
-            ctx.stroke();
-            ctx.fillStyle = '#3498db';
-            ctx.beginPath();
-            ctx.arc(-4, -12, 4, 0, Math.PI*2);
-            ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = '#8e44ad'; ctx.beginPath(); ctx.moveTo(4, 10); ctx.lineTo(-4, -10); ctx.stroke();
+            ctx.fillStyle = '#3498db'; ctx.beginPath(); ctx.arc(-4, -12, 4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             break;
-
         case 'cannon': // 💣
-            ctx.fillStyle = '#8e44ad'; 
-            ctx.beginPath(); ctx.arc(0, 5, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#34495e';
-            ctx.translate(0, -2);
-            ctx.rotate(-0.2); 
-            ctx.beginPath(); ctx.rect(-5, -4, 16, 8); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#8e44ad'; ctx.beginPath(); ctx.arc(0, 5, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#34495e'; ctx.translate(0, -2); ctx.rotate(-0.2); ctx.beginPath(); ctx.rect(-5, -4, 16, 8); ctx.fill(); ctx.stroke();
             break;
-
         case 'healer': // 🌿
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#e74c3c';
-            ctx.beginPath();
-            ctx.rect(-2, -6, 4, 12);
-            ctx.rect(-6, -2, 12, 4);
-            ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.rect(-2, -6, 4, 12); ctx.rect(-6, -2, 12, 4); ctx.fill();
             break;
-
         case 'merchant': // 💰
-            ctx.fillStyle = '#f1c40f'; 
-            ctx.beginPath();
-            ctx.arc(0, 4, 8, 0, Math.PI*2);
-            ctx.fill(); ctx.stroke();
-            ctx.beginPath(); 
-            ctx.moveTo(-3, -3); ctx.lineTo(3, -3); ctx.lineTo(0, -9); ctx.closePath();
-            ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#d35400';
-            ctx.font = 'bold 10px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('$', 0, 7);
+            ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(0, 4, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-3, -3); ctx.lineTo(3, -3); ctx.lineTo(0, -9); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#d35400'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText('$', 0, 7);
             break;
-
         case 'general': // 🚩
-            ctx.strokeStyle = '#7f8c8d';
-            ctx.beginPath(); ctx.moveTo(-5, 12); ctx.lineTo(-5, -12); ctx.stroke();
-            ctx.fillStyle = '#e67e22';
-            ctx.beginPath();
-            ctx.moveTo(-5, -12); ctx.lineTo(10, -5); ctx.lineTo(-5, 2);
-            ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = '#7f8c8d'; ctx.beginPath(); ctx.moveTo(-5, 12); ctx.lineTo(-5, -12); ctx.stroke();
+            ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(-5, -12); ctx.lineTo(10, -5); ctx.lineTo(-5, 2); ctx.fill(); ctx.stroke();
             break;
-
         case 'midboss': // 👹
-            ctx.fillStyle = '#8e44ad'; 
-            ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(-18, -15); ctx.lineTo(-6, -10); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(10, -5); ctx.lineTo(18, -15); ctx.lineTo(6, -10); ctx.fill();
-            ctx.fillStyle = 'red';
-            ctx.beginPath(); ctx.arc(-5, 2, 2, 0, Math.PI*2); ctx.arc(5, 2, 2, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); 
-            ctx.moveTo(-3, 8); ctx.lineTo(-3, 12); ctx.lineTo(-1, 8);
-            ctx.moveTo(3, 8); ctx.lineTo(3, 12); ctx.lineTo(1, 8);
-            ctx.fill();
+            ctx.fillStyle = '#8e44ad'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(-18, -15); ctx.lineTo(-6, -10); ctx.fill(); ctx.beginPath(); ctx.moveTo(10, -5); ctx.lineTo(18, -15); ctx.lineTo(6, -10); ctx.fill();
+            ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(-5, 2, 2, 0, Math.PI*2); ctx.arc(5, 2, 2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(-3, 12); ctx.lineTo(-1, 8); ctx.moveTo(3, 8); ctx.lineTo(3, 12); ctx.lineTo(1, 8); ctx.fill();
             break;
-            
         default:
-            ctx.beginPath();
-            ctx.arc(0, 0, 10, 0, Math.PI*2);
-            ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             break;
     }
 }
