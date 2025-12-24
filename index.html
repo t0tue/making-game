@@ -285,16 +285,16 @@
     // --- 유닛 데이터 ---
     const unitTypes = [
         { id: 'sword', name: '검병', desc: '근접 기본', type: 'circle', cost: 50, baseHp: 120, baseDmg: 10, range: 35, speed: 1.5, color: '#ecf0f1', icon: '⚔️', cooldown: 30, level: 1, maxLevel: 10, upgradeCostBase: 100 },
-        { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'triangle', cost: 130, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 200 },
-        { id: 'tank', name: '방패병', desc: '높은 체력', type: 'square', cost: 220, baseHp: 450, baseDmg: 8, range: 35, speed: 0.8, color: '#f1c40f', icon: '🛡️', cooldown: 60, level: 1, maxLevel: 10, upgradeCostBase: 300 },
-        { id: 'wizard', name: '마법사', desc: '광역 폭딜', type: 'diamond', cost: 400, baseHp: 90, baseDmg: 45, range: 140, speed: 1.0, color: '#9b59b6', icon: '🔮', cooldown: 90, level: 1, maxLevel: 10, upgradeCostBase: 500 },
-        { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'cannon', cost: 600, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 600 }
+        { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'triangle', cost: 50, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 200 },
+        { id: 'tank', name: '방패병', desc: '높은 체력', type: 'square', cost: 50, baseHp: 450, baseDmg: 8, range: 35, speed: 0.8, color: '#f1c40f', icon: '🛡️', cooldown: 60, level: 1, maxLevel: 10, upgradeCostBase: 300 },
+        { id: 'wizard', name: '마법사', desc: '광역 폭딜', type: 'diamond', cost: 50, baseHp: 90, baseDmg: 45, range: 140, speed: 1.0, color: '#9b59b6', icon: '🔮', cooldown: 90, level: 1, maxLevel: 10, upgradeCostBase: 500 },
+        { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'cannon', cost: 50, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 600 }
     ];
 
     const specialUnits = [
-        { id: 'merchant', name: '거상', desc: '수입 증가', type: 'star', cost: 300, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1 },
-        { id: 'healer', name: '사제', desc: '아군 치유', type: 'cross', cost: 350, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1 },
-        { id: 'general', name: '장군', desc: '공격력 버프', type: 'pentagon', cost: 500, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1 }
+        { id: 'merchant', name: '거상', desc: '수입 증가', type: 'star', cost: 50, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1 },
+        { id: 'healer', name: '사제', desc: '아군 치유', type: 'cross', cost: 50, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1 },
+        { id: 'general', name: '장군', desc: '공격력 버프', type: 'pentagon', cost: 50, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1 }
     ];
 
     const midBossData = { 
@@ -691,7 +691,7 @@
 
     function unlockHero() {
         if (gameState.heroUnlocked) return;
-        const cost = 500;
+        const cost = 50;
         if (gameState.gold >= cost) {
             gameState.gold -= cost;
             gameState.heroUnlocked = true;
@@ -701,7 +701,7 @@
             createUnitButton(pickedUnit);
             createDamageText(playerBase.x, playerBase.y - 100, `${pickedUnit.name} 계약!`, "#FFD700");
         } else {
-            alert("골드가 부족합니다! (필요: 500)");
+            alert("골드가 부족합니다! (필요: 50)");
         }
     }
 
