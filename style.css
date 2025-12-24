@@ -42,6 +42,40 @@ h1 { margin: 5px 0 15px 0; text-shadow: 0 0 10px rgba(255,255,255,0.3); font-siz
     box-shadow: 0 0 15px #e67e22; transform: scale(1.2); color: #fff;
 }
 
+/* 1. 4번째 점(#dot-4)만 특별하게 꾸미기 */
+#dot-4 {
+    width: 18px;          /* 다른 점보다 큼 */
+    height: 18px;
+    background-color: #8e44ad; /* 보라색 (보스 컬러) */
+    border: 2px solid #fff;
+    box-shadow: 0 0 8px #8e44ad; 
+    z-index: 2;
+}
+
+/* 2. 점 위에 도깨비 아이콘 띄우기 */
+#dot-4::after {
+    content: '👹';        /* 아이콘 */
+    position: absolute;
+    top: -22px;           /* 점 위로 올리기 */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 16px;
+    animation: bounce 1s infinite alternate; /* 둥실둥실 움직임 */
+}
+
+/* 3. 보스 스테이지 진행 중일 때(.active) 더 강렬하게 */
+#dot-4.active {
+    background-color: #e74c3c; /* 빨간색으로 변경 (위기감) */
+    box-shadow: 0 0 15px #e74c3c, 0 0 30px #e74c3c; /* 붉은 광원 효과 */
+    transform: scale(1.6);
+}
+
+/* 아이콘 둥실둥실 애니메이션 */
+@keyframes bounce {
+    from { top: -22px; }
+    to { top: -26px; }
+}
+
 #game-info {
     width: 840px; display: flex; justify-content: space-between;
     margin-bottom: 5px; color: #aaa; font-size: 14px;
