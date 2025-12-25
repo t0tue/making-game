@@ -59,7 +59,8 @@ let playerCooldowns = {};
 let particles = [];
 let damageTexts = [];
 
-// --- 유닛 클래스 ---
+
+// --- 유닛 클래스 (수정됨: 플레이어만 강화 적용) ---
 class Unit {
     constructor(typeData, team) {
         this.id = typeData.id;
@@ -71,9 +72,19 @@ class Unit {
         this.bounty = Math.floor((typeData.cost || 100) * 0.2);
         if (this.id === 'midboss') this.bounty = 1000;
 
-        let stats = getUnitStats(typeData);
+        // [🔥 핵심 수정] 적군은 업그레이드 레벨 무시 (항상 1레벨 스탯)
+        // 플레이어는 현재 업그레이드 레벨 적용
+        const levelToUse = (team === 'player') ? typeData.level : 1;
+
+        // 스탯 계산 로직 (getUnitStats 함수 내용을 내장함)
+        let stats = { hp: typeData.baseHp, dmg: typeData.baseDmg };
+        if (levelToUse > 1) {
+            const multiplier = 1 + (levelToUse - 1) * 0.2; // 레벨당 20% 증가
+            stats.hp = Math.floor(stats.hp * multiplier);
+            stats.dmg = Math.floor(stats.dmg * multiplier);
+        }
         
-        // 적군 난이도 스케일링
+        // 적군 스테이지 난이도 스케일링 (기존 로직 유지)
         if (team === 'enemy' && this.id !== 'midboss') {
             const stageMulti = 1 + (gameState.stage - 1) * 0.15;
             stats.hp *= stageMulti;
@@ -103,13 +114,14 @@ class Unit {
             this.direction = -1;
         }
     }
-
+    // ... (이하 메서드들은 기존과 동일)
     refreshStats() {
         if (this.team !== 'player') return;
         let typeData = unitTypes.find(u => u.id === this.id);
         if (!typeData) typeData = gameState.heroes.find(h => h.id === this.id);
         if (!typeData) return;
 
+        // 여기도 플레이어만 적용되므로 그대로 둠
         const newStats = getUnitStats(typeData);
         const hpRatio = this.hp / this.maxHp;
         this.maxHp = newStats.hp;
