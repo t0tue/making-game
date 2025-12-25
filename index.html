@@ -2,81 +2,52 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strategic Defense</title>
+    <title>공성전: 액션 업데이트</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="main-wrapper">
-        <header>
-            <h1>🏰 Strategic Defense</h1>
-        </header>
+    <div class="progress-container">
+        <div class="progress-track"></div>
+        <div class="progress-fill" id="progress-fill"></div>
+        <div class="stage-dot" id="dot-1">1</div>
+        <div class="stage-dot" id="dot-2">2</div>
+        <div class="stage-dot" id="dot-3">3</div>
+        <div class="stage-dot" id="dot-4">4</div>
+        <div class="stage-dot" id="dot-5">5</div>
+        <div class="stage-dot" id="dot-6">6</div>
+        <div class="stage-dot" id="dot-7">7</div>
+    </div>
 
-        <div id="game-container">
-            <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <h1>🏰 공성전: 액션 업데이트</h1>
 
-            <div id="start-screen">
-                <div class="screen-content">
-                    <h1 class="game-title">전략 디펜스</h1>
-                    <p class="game-desc">유닛을 조합하여 적의 요새를 파괴하세요!</p>
-                    <div class="controls-guide">
-                        <span>⚔️ 유닛 소환</span>
-                        <span>⬆️ 유닛 강화</span>
-                        <span>🎲 랜덤 뽑기</span>
-                    </div>
-                    <button id="start-btn" onclick="startGame()">⚔️ 전투 시작</button>
-                </div>
-            </div>
+    <div id="game-info">
+        <span id="game-timer">시간: 00:00</span>
+        <span id="enemy-status" style="color: #e74c3c;">적군: 정찰병 접근 중...</span>
+    </div>
 
-            <div id="game-over" style="display: none;">
-                <div class="screen-content">
-                    <h1 id="result-message">게임 종료</h1>
-                    <button class="restart-btn" onclick="location.reload()">🔄 다시 도전하기</button>
-                </div>
-            </div>
-        </div>
+    <canvas id="gameCanvas" width="840" height="400"></canvas>
 
-        <div id="info-panel">
-            <div id="game-timer">시간: 00:00</div>
-            <div id="enemy-status">적군 탐색 중...</div>
-        </div>
-
-        <div id="stage-progress-container">
-            <div class="progress-track">
-                <div id="progress-fill"></div>
-            </div>
-            <div class="stage-dots">
-                <div id="dot-1" class="dot active">1</div>
-                <div id="dot-2" class="dot">2</div>
-                <div id="dot-3" class="dot">3</div>
-                <div id="dot-4" class="dot">4</div>
-                <div id="dot-5" class="dot">5</div>
-                <div id="dot-6" class="dot">6</div>
-                <div id="dot-7" class="dot final">7</div>
-            </div>
-        </div>
-
-        <div id="stats-bar">
-            <div class="stat-box gold">
-                <span class="label">💰 골드</span>
-                <span id="gold-display" class="value">0</span>
-            </div>
-            <div class="stat-box income">
-                <span class="label">📈 수입</span>
-                <span id="income-display" class="value">0</span>
-            </div>
-            <div class="stat-box enemy">
-                <span class="label">😈 적 기지</span>
-                <span id="enemy-hp" class="value">100</span>%
-            </div>
-        </div>
-
-        <div id="deck-container">
-            </div>
-
+    <div id="ui-panel">
         <div id="unlock-btn-container">
-            <button onclick="playGacha()">🎲 랜덤 보급품</button>
+            <button id="unlock-btn" onclick="unlockHero()">📜 영웅 계약 (500 G)</button>
+        </div>
+
+        <div class="resource-box">
+            💰 <span id="gold-display">0</span>
+            <div style="font-size:12px; color:#bdc3c7; margin-top:5px;">+<span id="income-display">10</span>/초</div>
+        </div>
+        <div id="deck-container"></div>
+        <div class="resource-box" style="color: #e74c3c;">
+            적 기지<br>
+            <span id="enemy-hp">100</span>%
+        </div>
+    </div>
+
+    <div id="game-over">
+        <div class="modal-content">
+            <h1 id="result-message" style="margin:0;">게임 종료</h1>
+            <button class="restart" onclick="location.reload()">다시 하기</button>
         </div>
     </div>
 
