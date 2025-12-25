@@ -17,7 +17,7 @@ const GAME_CONFIG = {
     // 2. 기지 설정
     base: {
         player: { x: 60, y: 200, hp: 5000, color: '#3498db' }, // 플레이어 기지
-        enemy:  { x: 780, y: 200, hp: 7000, color: '#e74c3c' } // 적 기지
+        enemy:  { x: 780, y: 200, hp: 10000, color: '#e74c3c' } // 적 기지
     },
 
     // 3. 뽑기(Gacha) 설정
