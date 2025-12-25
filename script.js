@@ -509,9 +509,13 @@ function playGacha() {
         let reward = 0;
         let msg = "";
         
-        if (goldRand < 0.4) { reward = 100; msg = "아쉽네요.."; } 
-        else if (goldRand < 0.8) { reward = 300; msg = "💰 용돈 획득!"; } 
-        else { reward = 500; msg = "💰💰 복권 당첨!!"; } 
+        if (goldRand < 0.6) { 
+            reward = 100; 
+            msg = "아쉽네요.."; 
+        } else { 
+            reward = 300; 
+            msg = "💰 용돈 획득!"; 
+        }
         
         gameState.gold += reward;
         createDamageText(playerBase.x, playerBase.y - 100, `${msg} +${reward}G`, "#f1c40f");
