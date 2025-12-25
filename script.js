@@ -36,7 +36,7 @@ const GAME_CONFIG = {
         { id: 'sword',  name: '검병',   desc: '근접 기본',   cost: 50,  hp: 120, dmg: 10,  range: 35,  speed: 1.5, cd: 30,  color: '#ecf0f1', icon: '⚔️', upgrade: 80 },
         { id: 'archer', name: '궁수',   desc: '원거리 지원', cost: 100, hp: 70,  dmg: 15,  range: 160, speed: 1.2, cd: 45,  color: '#2ecc71', icon: '🏹', upgrade: 150 },
         { id: 'tank',   name: '방패병', desc: '높은 체력',   cost: 150, hp: 450, dmg: 8,   range: 35,  speed: 0.8, cd: 60,  color: '#f1c40f', icon: '🛡️', upgrade: 200 },
-        { id: 'wizard', name: '마법사', desc: '광역 폭딜',   cost: 350, hp: 90,  dmg: 40,  range: 140, speed: 1.0, cd: 90,  color: '#9b59b6', icon: '🔮', upgrade: 400 },
+        { id: 'wizard', name: '마법사', desc: '광역 폭딜',   cost: 380, hp: 90,  dmg: 40,  range: 140, speed: 1.0, cd: 90,  color: '#9b59b6', icon: '🔮', upgrade: 400 },
         { id: 'cannon', name: '대포',   desc: '고정형 포탑', cost: 400, hp: 250, dmg: 120, range: 420, speed: 0,   cd: 150, color: '#34495e', icon: '💣', upgrade: 500 }
     ],
 
