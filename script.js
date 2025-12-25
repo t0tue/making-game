@@ -414,7 +414,7 @@ function buyUpgrade(unitId) {
 function playGacha() {
     const cost = 250; 
     if (gameState.gold < cost) {
-        alert("골드가 부족합니다! (필요:  ${cost}G)");
+        alert("골드가 부족합니다! (`필요:  ${cost} G)`");
         return;
     }
     
