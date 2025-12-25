@@ -8,10 +8,9 @@ const GAME_CONFIG = {
     // 1. 기본 자원 설정
     economy: {
         startGold: 350,         // 시작 골드
-        baseIncome: 15,         // 기본 초당 수입
+        baseIncome: 10,         // 기본 초당 수입
         incomeTick: 60,         // 수입 들어오는 주기 (프레임 단위, 60 = 1초)
         merchantBonus: 10,      // 거상 1명당 추가 수입
-        midBossBonus: 600       // 중간 보스 처치 보상
     },
 
     // 2. 기지 설정
@@ -127,9 +126,11 @@ class Unit {
         this.name = typeData.name;
         this.team = team;
         
-        // 현상금 설정 (20% 환급)
-        this.bounty = Math.floor((typeData.cost || 100) * 0.2);
-        if (this.id === 'midboss') this.bounty = 1000;
+        // Unit 클래스 constructor 내부
+        // 보스 여부와 상관없이 설정된 cost의 20% (또는 원하는 비율)를 줌
+        this.bounty = Math.floor((typeData.cost || 100) * 0.2); 
+
+        if (this.id === 'midboss') this.bounty = typeData.cost;
 
         // [핵심] 적군은 강화 미적용 (항상 1레벨) / 플레이어는 현재 레벨 적용
         const levelToUse = (team === 'player') ? typeData.level : 1;
@@ -647,11 +648,6 @@ function update() {
             if (u.team === 'enemy') {
                 gameState.gold += u.bounty;
                 createDamageText(u.x, u.y - 20, `+${u.bounty}G`, "#f1c40f");
-                
-                if (u.id === 'midboss') {
-                    gameState.gold += GAME_CONFIG.economy.midBossBonus;
-                    createDamageText(canvas.width/2, canvas.height/2, `보스 처치 보상 +${GAME_CONFIG.economy.midBossBonus}G!`, "#FFD700");
-                }
             }
             return false; 
         }
