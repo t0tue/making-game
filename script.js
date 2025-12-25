@@ -1,68 +1,32 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
-// =================================================================================
-// ⚙️ [설정] 게임 밸런스 및 초기 설정 (여기만 수정하면 게임이 바뀝니다)
-// =================================================================================
-const GAME_CONFIG = {
-    // 1. 기본 자원 설정
-    economy: {
-        startGold: 350,         // 시작 골드
-        baseIncome: 10,         // 기본 초당 수입
-        incomeTick: 60,         // 수입 들어오는 주기 (프레임 단위, 60 = 1초)
-        merchantBonus: 10,      // 거상 1명당 추가 수입
-    },
-
-    // 2. 기지 설정
-    base: {
-        player: { x: 60, y: 200, hp: 5000, color: '#3498db' }, // 플레이어 기지
-        enemy:  { x: 780, y: 200, hp: 10000, color: '#e74c3c' } // 적 기지
-    },
-
-    // 3. 뽑기(Gacha) 설정
-    gacha: {
-        cost: 200,              // 뽑기 비용
-        unlockStage: 2,         // 뽑기 해금 스테이지
-        probs: {                // 확률 (합계 100 기준이 아님, 순차적 체크)
-            hero: 15,           // 15% 확률로 영웅 획득
-            resource: 50,       // (영웅 실패 시) 50% 확률 미만이면 자원(골드) 획득
-            // 나머지는 유닛 강화
-        }
-    },
-
-    // 4. 유닛 데이터 (플레이어/적 공용)
-    units: [
-        { id: 'sword',  name: '검병',   desc: '근접 기본',   cost: 50,  hp: 120, dmg: 10,  range: 35,  speed: 1.5, cd: 30,  color: '#ecf0f1', icon: '⚔️', upgrade: 80 },
-        { id: 'archer', name: '궁수',   desc: '원거리 지원', cost: 100, hp: 70,  dmg: 15,  range: 160, speed: 1.2, cd: 45,  color: '#2ecc71', icon: '🏹', upgrade: 150 },
-        { id: 'tank',   name: '방패병', desc: '높은 체력',   cost: 150, hp: 450, dmg: 8,   range: 35,  speed: 0.8, cd: 60,  color: '#f1c40f', icon: '🛡️', upgrade: 200 },
-        { id: 'wizard', name: '마법사', desc: '광역 폭딜',   cost: 380, hp: 90,  dmg: 40,  range: 140, speed: 1.0, cd: 90,  color: '#9b59b6', icon: '🔮', upgrade: 400 },
-        { id: 'cannon', name: '대포',   desc: '고정형 포탑', cost: 400, hp: 250, dmg: 120, range: 420, speed: 0,   cd: 150, color: '#34495e', icon: '💣', upgrade: 500 }
-    ],
-
-    // 5. 영웅(특수 유닛) 데이터
-    heroes: [
-        { id: 'merchant', name: '거상', desc: '수입 증가',   cost: 300, hp: 300, dmg: 0,   range: 180, speed: 0.8, cd: 60, color: '#FFD700', icon: '💰', effectRange: 50,  upgrade: 500 },
-        { id: 'healer',   name: '사제', desc: '아군 치유',   cost: 350, hp: 150, dmg: -20, range: 160, speed: 1.0, cd: 45, color: '#fab1a0', icon: '🌿', effectRange: 200, upgrade: 500 },
-        { id: 'general',  name: '장군', desc: '공격력 버프', cost: 400, hp: 600, dmg: 20,  range: 150, speed: 0.9, cd: 90, color: '#e67e22', icon: '🚩', effectRange: 200, upgrade: 500 }
-    ],
-
-    // 6. 보스 데이터
-    boss: { 
-        id: 'midboss', name: '오크 대장', cost: 1000, hp: 3000, dmg: 80, range: 50, speed: 0.6, color: '#8e44ad', icon: '👹' 
-    },
-
-    // 7. 스테이지 설정 (unitIdxs: 0=검병, 1=궁수, 2=방패병 ...)
-    // spawnInterval: 적이 나오는 속도 (낮을수록 빠름)
-    stages: [
-        { level: 1, duration: 35, spawnInterval: 200, unitIdxs: [0],       title: "1단계: 정찰대" },
-        { level: 2, duration: 35, spawnInterval: 160, unitIdxs: [0, 1],    title: "2단계: 공격 부대" },
-        { level: 3, duration: 35, spawnInterval: 130, unitIdxs: [0, 1, 2], title: "3단계: 정규군 진격" },
-        { level: 4, duration: 35, spawnInterval: 120, unitIdxs: [0, 1, 2], title: "4단계: 보스 지원 사격" }, // 보스 등장 스테이지
-        { level: 5, duration: 35, spawnInterval: 100,  unitIdxs: [0, 1, 2, 3], title: "5단계: 마법 부대 합류" },
-        { level: 6, duration: 35, spawnInterval: 70,  unitIdxs: [0, 1, 2, 3, 4], title: "6단계: 총공격 개시" },
-        { level: 7, duration: 999, spawnInterval: 50, unitIdxs: [0, 1, 2, 3, 4], title: "7단계: 최후의 결전" }
-    ]
-};
+const GAME_CONFIG = {economy: {startGold: 350, baseIncome: 10, incomeTick: 60, merchantBonus: 10},
+                     base: {player: { x: 60, y: 200, hp: 5000, color: '#3498db' },
+                            enemy:  { x: 780, y: 200, hp: 10000, color: '#e74c3c' }},
+                     gacha: {cost: 200, unlockStage: 2, 
+                             probs: { hero: 15, resource: 50}},
+                     units: [
+                         { id: 'sword',  name: '검병',   desc: '근접 기본',   cost: 50,  hp: 120, dmg: 10,  range: 35,  speed: 1.5, cd: 30,  color: '#ecf0f1', icon: '⚔️', upgrade: 80 },
+                         { id: 'archer', name: '궁수',   desc: '원거리 지원', cost: 100, hp: 70,  dmg: 15,  range: 160, speed: 1.2, cd: 45,  color: '#2ecc71', icon: '🏹', upgrade: 150 },
+                         { id: 'tank',   name: '방패병', desc: '높은 체력',   cost: 150, hp: 450, dmg: 8,   range: 35,  speed: 0.8, cd: 60,  color: '#f1c40f', icon: '🛡️', upgrade: 200 },
+                         { id: 'wizard', name: '마법사', desc: '광역 폭딜',   cost: 380, hp: 90,  dmg: 40,  range: 140, speed: 1.0, cd: 90,  color: '#9b59b6', icon: '🔮', upgrade: 400 },
+                         { id: 'cannon', name: '대포',   desc: '고정형 포탑', cost: 400, hp: 250, dmg: 120, range: 420, speed: 0,   cd: 150, color: '#34495e', icon: '💣', upgrade: 500 }
+                     ],
+                     heroes: [
+                         { id: 'merchant', name: '거상', desc: '수입 증가',   cost: 300, hp: 300, dmg: 0,   range: 180, speed: 0.8, cd: 60, color: '#FFD700', icon: '💰', effectRange: 50,  upgrade: 500 },
+                         { id: 'healer',   name: '사제', desc: '아군 치유',   cost: 350, hp: 150, dmg: -20, range: 160, speed: 1.0, cd: 45, color: '#fab1a0', icon: '🌿', effectRange: 200, upgrade: 500 },
+                         { id: 'general',  name: '장군', desc: '공격력 버프', cost: 400, hp: 600, dmg: 20,  range: 150, speed: 0.9, cd: 90, color: '#e67e22', icon: '🚩', effectRange: 200, upgrade: 500 }
+                     ],
+                     boss: { id: 'midboss', name: '오크 대장', cost: 1000, hp: 3000, dmg: 80, range: 50, speed: 0.6, color: '#8e44ad', icon: '👹'},
+                     stages: [
+                         { level: 1, duration: 35, spawnInterval: 200, unitIdxs: [0],       title: "1단계: 정찰대" },
+                         { level: 2, duration: 35, spawnInterval: 160, unitIdxs: [0, 1],    title: "2단계: 공격 부대" },
+                         { level: 3, duration: 35, spawnInterval: 130, unitIdxs: [0, 1, 2], title: "3단계: 정규군 진격" },
+                         { level: 4, duration: 35, spawnInterval: 120, unitIdxs: [0, 1, 2], title: "4단계: 보스 지원 사격" }, 
+                         { level: 5, duration: 35, spawnInterval: 100,  unitIdxs: [0, 1, 2, 3], title: "5단계: 마법 부대 합류" },
+                         { level: 6, duration: 35, spawnInterval: 70,  unitIdxs: [0, 1, 2, 3, 4], title: "6단계: 총공격 개시" },
+                         { level: 7, duration: 999, spawnInterval: 50, unitIdxs: [0, 1, 2, 3, 4], title: "7단계: 최후의 결전" }
+]};
 
 let unitTypes = GAME_CONFIG.units.map(u => ({
     ...u, type: 'icon', level: 1, maxLevel: 10, baseHp: u.hp, baseDmg: u.dmg, upgradeCostBase: u.upgrade
@@ -88,7 +52,7 @@ let gameState = {
     gameOver: false,
     enemySpawnCooldown: 0,
     heroes: []
-
+};
 const playerBase = { ...GAME_CONFIG.base.player, maxHp: GAME_CONFIG.base.player.hp };
 const enemyBase = { ...GAME_CONFIG.base.enemy, maxHp: GAME_CONFIG.base.enemy.hp };
 
@@ -672,50 +636,99 @@ function draw() {
     updateAndDrawEffects();
 }
 
+// 기존 drawBase 함수를 이 코드로 완전히 교체하세요.
 function drawBase(base, label) {
+    const x = base.x;
+    const y = base.y;
+
     if (label === '아군') {
-        ctx.fillStyle = base.color;
-        ctx.fillRect(base.x - 30, base.y - 80, 60, 100);
-        ctx.beginPath();
-        ctx.moveTo(base.x - 40, base.y - 80);
-        ctx.lineTo(base.x, base.y - 120);
-        ctx.lineTo(base.x + 40, base.y - 80);
-        ctx.fillStyle = '#2980b9';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(base.x, base.y - 120);
-        ctx.lineTo(base.x, base.y - 140);
-        ctx.strokeStyle = '#fff';
-        ctx.stroke();
-        ctx.fillStyle = 'blue';
-        ctx.fillRect(base.x, base.y - 140, 20, 10);
-        ctx.fillStyle = '#2c3e50';
-        ctx.fillRect(base.x - 10, base.y - 60, 20, 20);
-    } else {
-        ctx.fillStyle = base.color;
-        ctx.fillRect(base.x - 30, base.y - 70, 60, 90);
-        ctx.beginPath();
-        ctx.moveTo(base.x - 30, base.y - 70); ctx.lineTo(base.x - 20, base.y - 100); ctx.lineTo(base.x - 10, base.y - 70);
-        ctx.moveTo(base.x - 10, base.y - 70); ctx.lineTo(base.x, base.y - 110); ctx.lineTo(base.x + 10, base.y - 70);
-        ctx.moveTo(base.x + 10, base.y - 70); ctx.lineTo(base.x + 20, base.y - 100); ctx.lineTo(base.x + 30, base.y - 70);
+        // --- 플레이어: 푸른 성채 ---
+        
+        // 메인 성벽 (회색)
         ctx.fillStyle = '#7f8c8d';
-        ctx.fill();
-        ctx.fillStyle = '#222';
+        ctx.fillRect(x - 35, y - 100, 70, 100);
+        
+        // 성벽 질감 (벽돌)
+        ctx.strokeStyle = '#95a5a6';
         ctx.beginPath();
-        ctx.arc(base.x, base.y - 20, 15, Math.PI, 0); 
+        ctx.moveTo(x - 35, y - 70); ctx.lineTo(x + 35, y - 70);
+        ctx.moveTo(x - 35, y - 40); ctx.lineTo(x + 35, y - 40);
+        ctx.moveTo(x, y - 100); ctx.lineTo(x, y); // 중앙선
+        ctx.stroke();
+
+        // 성곽 (상단 요철)
+        ctx.fillStyle = '#7f8c8d';
+        ctx.fillRect(x - 40, y - 120, 20, 20); // 좌측 탑
+        ctx.fillRect(x + 20, y - 120, 20, 20); // 우측 탑
+        ctx.fillRect(x - 10, y - 110, 20, 10); // 중앙 연결부
+
+        // 성문 (아치형)
+        ctx.fillStyle = '#2c3e50';
+        ctx.beginPath();
+        ctx.moveTo(x - 15, y);
+        ctx.lineTo(x - 15, y - 30);
+        ctx.arc(x, y - 30, 15, Math.PI, 0); // 둥근 윗부분
+        ctx.lineTo(x + 15, y);
         ctx.fill();
+
+        // 깃발 (파란색)
+        ctx.strokeStyle = '#bdc3c7';
+        ctx.beginPath(); ctx.moveTo(x, y - 110); ctx.lineTo(x, y - 150); ctx.stroke(); // 깃대
+        ctx.fillStyle = '#3498db';
+        ctx.beginPath(); ctx.moveTo(x, y - 150); ctx.lineTo(x + 25, y - 140); ctx.lineTo(x, y - 130); ctx.fill(); // 깃발
+
+    } else {
+        // --- 적군: 붉은 요새 ---
+
+        // 메인 몸체 (검은색)
+        ctx.fillStyle = '#2c3e50';
+        ctx.beginPath();
+        ctx.moveTo(x - 40, y);
+        ctx.lineTo(x - 30, y - 80); // 사다리꼴 형태
+        ctx.lineTo(x + 30, y - 80);
+        ctx.lineTo(x + 40, y);
+        ctx.fill();
+
+        // 가시 장식 (붉은색)
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath();
+        ctx.moveTo(x - 30, y - 80); ctx.lineTo(x - 35, y - 110); ctx.lineTo(x - 20, y - 80); // 좌측 가시
+        ctx.moveTo(x + 30, y - 80); ctx.lineTo(x + 35, y - 110); ctx.lineTo(x + 20, y - 80); // 우측 가시
+        ctx.moveTo(x - 10, y - 80); ctx.lineTo(x, y - 100); ctx.lineTo(x + 10, y - 80);     // 중앙 가시
+        ctx.fill();
+
+        // 사악한 눈 (노란색)
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath();
+        ctx.arc(x, y - 40, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'red'; // 동공
+        ctx.beginPath(); ctx.moveTo(x, y-45); ctx.lineTo(x, y-35); ctx.stroke();
     }
 
+    // --- 공통: 체력바 표시 ---
     const hpPercent = Math.max(0, base.hp / base.maxHp);
-    ctx.fillStyle = '#333';
-    ctx.fillRect(base.x - 40, base.y - 150, 80, 10);
-    ctx.fillStyle = hpPercent > 0.5 ? '#2ecc71' : '#e74c3c';
-    ctx.fillRect(base.x - 40, base.y - 150, 80 * hpPercent, 10);
     
+    // 체력바 배경
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x - 40, y - 160, 80, 10);
+    
+    // 체력바 게이지
+    ctx.fillStyle = hpPercent > 0.5 ? '#2ecc71' : '#e74c3c';
+    ctx.fillRect(x - 40, y - 160, 80 * hpPercent, 10);
+    
+    // 체력바 테두리
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 40, y - 160, 80, 10);
+
+    // 라벨 (아군/적군)
     ctx.fillStyle = 'white';
-    ctx.font = '12px Arial';
+    ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(label, base.x, base.y - 160);
+    ctx.shadowColor = "black"; ctx.shadowBlur = 4; // 글자 잘 보이게 그림자
+    ctx.fillText(label, x, y - 170);
+    ctx.shadowBlur = 0; // 그림자 초기화
 }
 
 function updateUI() {
