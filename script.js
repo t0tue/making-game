@@ -1,45 +1,109 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// --- 게임 상태 변수 ---
+// =================================================================================
+// ⚙️ [설정] 게임 밸런스 및 초기 설정 (여기만 수정하면 게임이 바뀝니다)
+// =================================================================================
+const GAME_CONFIG = {
+    // 1. 기본 자원 설정
+    economy: {
+        startGold: 350,         // 시작 골드
+        baseIncome: 15,         // 기본 초당 수입
+        incomeTick: 60,         // 수입 들어오는 주기 (프레임 단위, 60 = 1초)
+        merchantBonus: 10,      // 거상 1명당 추가 수입
+        midBossBonus: 600       // 중간 보스 처치 보상
+    },
+
+    // 2. 기지 설정
+    base: {
+        player: { x: 60, y: 200, hp: 5000, color: '#3498db' }, // 플레이어 기지
+        enemy:  { x: 780, y: 200, hp: 5000, color: '#e74c3c' } // 적 기지
+    },
+
+    // 3. 뽑기(Gacha) 설정
+    gacha: {
+        cost: 250,              // 뽑기 비용
+        unlockStage: 2,         // 뽑기 해금 스테이지
+        probs: {                // 확률 (합계 100 기준이 아님, 순차적 체크)
+            hero: 15,           // 15% 확률로 영웅 획득
+            resource: 50,       // (영웅 실패 시) 50% 확률 미만이면 자원(골드) 획득
+            // 나머지는 유닛 강화
+        }
+    },
+
+    // 4. 유닛 데이터 (플레이어/적 공용)
+    units: [
+        { id: 'sword',  name: '검병',   desc: '근접 기본',   cost: 50,  hp: 120, dmg: 10,  range: 35,  speed: 1.5, cd: 30,  color: '#ecf0f1', icon: '⚔️', upgrade: 80 },
+        { id: 'archer', name: '궁수',   desc: '원거리 지원', cost: 100, hp: 70,  dmg: 15,  range: 160, speed: 1.2, cd: 45,  color: '#2ecc71', icon: '🏹', upgrade: 150 },
+        { id: 'tank',   name: '방패병', desc: '높은 체력',   cost: 150, hp: 450, dmg: 8,   range: 35,  speed: 0.8, cd: 60,  color: '#f1c40f', icon: '🛡️', upgrade: 200 },
+        { id: 'wizard', name: '마법사', desc: '광역 폭딜',   cost: 350, hp: 90,  dmg: 40,  range: 140, speed: 1.0, cd: 90,  color: '#9b59b6', icon: '🔮', upgrade: 400 },
+        { id: 'cannon', name: '대포',   desc: '고정형 포탑', cost: 400, hp: 250, dmg: 120, range: 420, speed: 0,   cd: 150, color: '#34495e', icon: '💣', upgrade: 500 }
+    ],
+
+    // 5. 영웅(특수 유닛) 데이터
+    heroes: [
+        { id: 'merchant', name: '거상', desc: '수입 증가',   cost: 300, hp: 300, dmg: 0,   range: 180, speed: 0.8, cd: 60, color: '#FFD700', icon: '💰', effectRange: 50,  upgrade: 500 },
+        { id: 'healer',   name: '사제', desc: '아군 치유',   cost: 350, hp: 150, dmg: -20, range: 160, speed: 1.0, cd: 45, color: '#fab1a0', icon: '🌿', effectRange: 200, upgrade: 500 },
+        { id: 'general',  name: '장군', desc: '공격력 버프', cost: 400, hp: 600, dmg: 20,  range: 150, speed: 0.9, cd: 90, color: '#e67e22', icon: '🚩', effectRange: 200, upgrade: 500 }
+    ],
+
+    // 6. 보스 데이터
+    boss: { 
+        id: 'midboss', name: '오크 대장', cost: 1000, hp: 3000, dmg: 60, range: 50, speed: 0.6, color: '#8e44ad', icon: '👹' 
+    },
+
+    // 7. 스테이지 설정 (unitIdxs: 0=검병, 1=궁수, 2=방패병 ...)
+    // spawnInterval: 적이 나오는 속도 (낮을수록 빠름)
+    stages: [
+        { level: 1, duration: 35, spawnInterval: 200, unitIdxs: [0],       title: "1단계: 정찰대" },
+        { level: 2, duration: 35, spawnInterval: 160, unitIdxs: [0, 1],    title: "2단계: 공격 부대" },
+        { level: 3, duration: 35, spawnInterval: 130, unitIdxs: [0, 1, 2], title: "3단계: 정규군 진격" },
+        { level: 4, duration: 35, spawnInterval: 110, unitIdxs: [0, 1, 2], title: "4단계: 보스 지원 사격" }, // 보스 등장 스테이지
+        { level: 5, duration: 35, spawnInterval: 90,  unitIdxs: [0, 1, 2, 3], title: "5단계: 마법 부대 합류" },
+        { level: 6, duration: 35, spawnInterval: 70,  unitIdxs: [0, 1, 2, 3, 4], title: "6단계: 총공격 개시" },
+        { level: 7, duration: 999, spawnInterval: 50, unitIdxs: [0, 1, 2, 3, 4], title: "7단계: 최후의 결전" }
+    ]
+};
+
+// =================================================================================
+// 🎮 시스템 변수 (여기서부터는 로직입니다)
+// =================================================================================
+
+// 데이터 초기화: 설정값을 바탕으로 실제 사용할 객체 생성
+let unitTypes = GAME_CONFIG.units.map(u => ({
+    ...u, type: 'icon', level: 1, maxLevel: 10, baseHp: u.hp, baseDmg: u.dmg, upgradeCostBase: u.upgrade
+}));
+
+let specialUnits = GAME_CONFIG.heroes.map(u => ({
+    ...u, type: 'icon', level: 1, maxLevel: 5, baseHp: u.hp, baseDmg: u.dmg, upgradeCostBase: u.upgrade
+}));
+
+let midBossData = { 
+    ...GAME_CONFIG.boss, type: 'icon', level: 1, baseHp: GAME_CONFIG.boss.hp, baseDmg: GAME_CONFIG.boss.dmg 
+};
+
+// 게임 상태
 let gameState = {
-    gold: 350,      
-    baseIncome: 15,
-    currentIncome: 15,
+    gold: GAME_CONFIG.economy.startGold,
+    baseIncome: GAME_CONFIG.economy.baseIncome,
+    currentIncome: GAME_CONFIG.economy.baseIncome,
     frame: 0,
     seconds: 0,
     stage: 1,
     midBossSpawned: false,
     gameOver: false,
     enemySpawnCooldown: 0,
-    heroes: [] // 보유 중인 영웅 목록
+    heroes: [] // 플레이어가 획득한 영웅
 };
 
-// 기지 속성
-const playerBase = { x: 60, y: 200, hp: 5000, maxHp: 5000, color: '#3498db' };
-const enemyBase = { x: 780, y: 200, hp: 5000, maxHp: 5000, color: '#e74c3c' };
+// 기지 객체 (복사해서 사용)
+const playerBase = { ...GAME_CONFIG.base.player, maxHp: GAME_CONFIG.base.player.hp };
+const enemyBase = { ...GAME_CONFIG.base.enemy, maxHp: GAME_CONFIG.base.enemy.hp };
 
-// 유닛 속성
-const unitTypes = [
-    { id: 'sword', name: '검병', desc: '근접 기본', type: 'icon', cost: 50, baseHp: 120, baseDmg: 10, range: 35, speed: 1.5, color: '#ecf0f1', icon: '⚔️', cooldown: 30, level: 1, maxLevel: 10, upgradeCostBase: 80 },
-    { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'icon', cost: 100, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 150 },
-    { id: 'tank', name: '방패병', desc: '높은 체력', type: 'icon', cost: 150, baseHp: 450, baseDmg: 8, range: 35, speed: 0.8, color: '#f1c40f', icon: '🛡️', cooldown: 60, level: 1, maxLevel: 10, upgradeCostBase: 200 },
-    { id: 'wizard', name: '마법사', desc: '광역 폭딜', type: 'icon', cost: 350, baseHp: 90, baseDmg: 40, range: 140, speed: 1.0, color: '#9b59b6', icon: '🔮', cooldown: 90, level: 1, maxLevel: 10, upgradeCostBase: 400 },
-    { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'icon', cost: 400, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 500 }
-];
-
-//특수 유닛 속성
-const specialUnits = [
-    { id: 'merchant', name: '거상', desc: '수입 증가', type: 'icon', cost: 300, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1, maxLevel: 5, upgradeCostBase: 500 },
-    { id: 'healer', name: '사제', desc: '아군 치유', type: 'icon', cost: 350, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1, maxLevel: 5, upgradeCostBase: 500 },
-    { id: 'general', name: '장군', desc: '공격력 버프', type: 'icon', cost: 400, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1, maxLevel: 5, upgradeCostBase: 500 }
-];
-
-const midBossData = { 
-    id: 'midboss', name: '오크 대장', type: 'icon', cost: 1000, 
-    baseHp: 3000, baseDmg: 60, range: 50, speed: 0.6, 
-    color: '#8e44ad', icon: '👹', level: 1
-};
+let units = [];
+let playerCooldowns = {};
+let particles = [];
+let damageTexts = [];
 
 // --- 유틸리티 함수 ---
 function getUnitStats(unitData) {
@@ -55,12 +119,6 @@ function getUpgradeCost(unitData) {
     return unitData.upgradeCostBase * unitData.level;
 }
 
-let units = [];
-let playerCooldowns = {}; 
-let particles = [];
-let damageTexts = [];
-
-
 // --- 유닛 클래스 ---
 class Unit {
     constructor(typeData, team) {
@@ -69,21 +127,22 @@ class Unit {
         this.name = typeData.name;
         this.team = team;
         
-        // 적 몹 현상금
+        // 현상금 설정 (20% 환급)
         this.bounty = Math.floor((typeData.cost || 100) * 0.2);
         if (this.id === 'midboss') this.bounty = 1000;
-        //업그레이드 플레이어만 적용
+
+        // [핵심] 적군은 강화 미적용 (항상 1레벨) / 플레이어는 현재 레벨 적용
         const levelToUse = (team === 'player') ? typeData.level : 1;
 
-        // 스탯 계산 로직 (getUnitStats 함수 내용을 내장함)
+        // 스탯 계산
         let stats = { hp: typeData.baseHp, dmg: typeData.baseDmg };
         if (levelToUse > 1) {
-            const multiplier = 1 + (levelToUse - 1) * 0.2; // 레벨당 20% 증가
+            const multiplier = 1 + (levelToUse - 1) * 0.2; 
             stats.hp = Math.floor(stats.hp * multiplier);
             stats.dmg = Math.floor(stats.dmg * multiplier);
         }
         
-        // 적군 스테이지 난이도 스케일링 (기존 로직 유지)
+        // 적군 스테이지 난이도 스케일링
         if (team === 'enemy' && this.id !== 'midboss') {
             const stageMulti = 1 + (gameState.stage - 1) * 0.15;
             stats.hp *= stageMulti;
@@ -120,7 +179,6 @@ class Unit {
         if (!typeData) typeData = gameState.heroes.find(h => h.id === this.id);
         if (!typeData) return;
 
-        // 여기도 플레이어만 적용되므로 그대로 둠
         const newStats = getUnitStats(typeData);
         const hpRatio = this.hp / this.maxHp;
         this.maxHp = newStats.hp;
@@ -140,13 +198,13 @@ class Unit {
         let target = null;
         let minDist = Infinity;
         
-        if (this.dmg < 0) {
+        if (this.dmg < 0) { // 힐러
             const allies = units.filter(u => u.team === this.team && u !== this && u.hp < u.maxHp);
             for (let a of allies) {
                 let dist = Math.abs(a.x - this.x);
                 if (dist < minDist) { minDist = dist; target = a; }
             }
-        } else {
+        } else { // 딜러
             const enemies = units.filter(u => u.team !== this.team && u.hp > 0);
             for (let e of enemies) {
                 let dist = Math.abs(e.x - this.x);
@@ -298,13 +356,11 @@ function initDeck() {
     const deckContainer = document.getElementById('deck-container');
     deckContainer.innerHTML = '';
     unitTypes.forEach(unit => createUnitButton(unit));
-    // 보유 중인 영웅 버튼 표시
     gameState.heroes.forEach(hero => createUnitButton(hero));
 }
 
 function createUnitButton(unit) {
     const deckContainer = document.getElementById('deck-container');
-    // 중복 생성 방지
     if(document.getElementById(`card-${unit.id}`)) return;
 
     if(!playerCooldowns[unit.id]) playerCooldowns[unit.id] = 0;
@@ -385,7 +441,7 @@ function buyUnit(unitId) {
     if (gameState.gold >= unitData.cost) {
         gameState.gold -= unitData.cost;
         units.push(new Unit(unitData, 'player'));
-        playerCooldowns[unitData.id] = unitData.cooldown;
+        playerCooldowns[unitData.id] = unitData.cd; // Config의 cd 속성 사용
         updateUI();
     }
 }
@@ -410,67 +466,58 @@ function buyUpgrade(unitId) {
     }
 }
 
-// [수정됨] 확률형 랜덤 박스 (가챠)
+// 확률형 랜덤 박스 (가챠)
 function playGacha() {
-    const cost = 250; 
+    const { cost, probs } = GAME_CONFIG.gacha;
+    
     if (gameState.gold < cost) {
-        alert("골드가 부족합니다! (`필요:  ${cost} G)`");
+        alert(`골드가 부족합니다! (필요: ${cost} G)`);
         return;
     }
     
     gameState.gold -= cost;
-    
-    // 이펙트
     createDamageText(playerBase.x, playerBase.y - 220, "랜덤 박스 개봉!", "white");
 
     const rand = Math.random() * 100; // 0 ~ 100
     
-    // 1. 특수 영웅 획득 (15%)
-    if (rand < 15) {
+    // 1. 특수 영웅 획득 (설정된 확률)
+    if (rand < probs.hero) {
         const heroPool = specialUnits;
         const picked = heroPool[Math.floor(Math.random() * heroPool.length)];
         
-        // 이미 보유 중인지 확인
         const existing = gameState.heroes.find(h => h.id === picked.id);
         if (existing) {
-            // 보유 중이면 레벨업
             if (existing.level < existing.maxLevel) {
                 existing.level++;
                 refreshCardUI(existing);
                 createDamageText(playerBase.x, playerBase.y - 100, `💎 대박! ${picked.name} 레벨업!`, "#FFD700");
             } else {
-                // 만렙이면 돈으로 대체
                 gameState.gold += 500;
                 createDamageText(playerBase.x, playerBase.y - 100, `💎 이미 만렙! +500G`, "#FFD700");
             }
         } else {
-            // 신규 획득
-            // 깊은 복사로 새 객체 생성
             const newHero = JSON.parse(JSON.stringify(picked));
             gameState.heroes.push(newHero);
             createUnitButton(newHero);
             createDamageText(playerBase.x, playerBase.y - 100, `💎 대박! ${newHero.name} 획득!`, "#FFD700");
         }
     } 
-    // 2. 재화 당첨 (35%)
-    else if (rand < 50) {
+    // 2. 재화 당첨 (영웅 확률 이후, 설정된 확률 미만이면)
+    else if (rand < (probs.hero + probs.resource)) {
         const goldRand = Math.random();
         let reward = 0;
         let msg = "";
         
-        if (goldRand < 0.4) { reward = 100; msg = "아쉽네요.."; } // 꽝 (손해)
-        else if (goldRand < 0.8) { reward = 300; msg = "💰 용돈 획득!"; } // 본전 이상
-        else { reward = 600; msg = "💰💰 복권 당첨!!"; } // 대박
+        if (goldRand < 0.4) { reward = 100; msg = "아쉽네요.."; } 
+        else if (goldRand < 0.8) { reward = 300; msg = "💰 용돈 획득!"; } 
+        else { reward = 600; msg = "💰💰 복권 당첨!!"; } 
         
         gameState.gold += reward;
         createDamageText(playerBase.x, playerBase.y - 100, `${msg} +${reward}G`, "#f1c40f");
     }
-    // 3. 일반 유닛 강화 (50%)
+    // 3. 일반 유닛 강화 (나머지 확률)
     else {
-        // 잠금 해제되지 않았거나 만렙인 유닛 제외
-        // 여기서는 기본 유닛 중 하나 랜덤 강화
         const targetUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
-        
         if (targetUnit.level < targetUnit.maxLevel) {
             targetUnit.level++;
             refreshCardUI(targetUnit);
@@ -479,7 +526,6 @@ function playGacha() {
             });
             createDamageText(playerBase.x, playerBase.y - 100, `🆙 ${targetUnit.name} 무료 강화!`, "#2ecc71");
         } else {
-            // 모두 만렙이면 골드 반환
             gameState.gold += 200;
             createDamageText(playerBase.x, playerBase.y - 100, `모두 만렙이라 환불`, "#aaa");
         }
@@ -488,16 +534,17 @@ function playGacha() {
     updateUI();
 }
 
-
 // --- 스테이지 관리 ---
 function updateStageProgress(currentStage) {
     const fillPercent = Math.min(100, ((currentStage - 1) / 6) * 100);
     document.getElementById('progress-fill').style.width = `${fillPercent}%`;
     for (let i = 1; i <= 7; i++) {
         const dot = document.getElementById(`dot-${i}`);
-        dot.classList.remove('active', 'passed');
-        if (i < currentStage) dot.classList.add('passed');
-        else if (i === currentStage) dot.classList.add('active');
+        if(dot) {
+            dot.classList.remove('active', 'passed');
+            if (i < currentStage) dot.classList.add('passed');
+            else if (i === currentStage) dot.classList.add('active');
+        }
     }
 }
 
@@ -508,21 +555,35 @@ function spawnEnemyAI() {
     }
 
     const sec = gameState.seconds;
-    let currentStage = Math.min(7, Math.floor(sec / 35) + 1);
-    gameState.stage = currentStage;
-    updateStageProgress(currentStage);
+    
+    // Config에서 현재 시간에 맞는 스테이지 찾기
+    let totalTime = 0;
+    let currentStageObj = GAME_CONFIG.stages[0];
+    
+    for(let i=0; i < GAME_CONFIG.stages.length; i++) {
+        totalTime += GAME_CONFIG.stages[i].duration;
+        if (sec < totalTime) {
+            currentStageObj = GAME_CONFIG.stages[i];
+            break;
+        }
+        if (i === GAME_CONFIG.stages.length - 1) currentStageObj = GAME_CONFIG.stages[i];
+    }
+    
+    const currentStageNum = currentStageObj.level;
+    gameState.stage = currentStageNum;
+    updateStageProgress(currentStageNum);
 
-    // 2스테이지부터 뽑기 버튼 활성화
-    if (currentStage >= 2) {
+    // 뽑기 버튼 활성화 체크
+    if (currentStageNum >= GAME_CONFIG.gacha.unlockStage) {
         document.getElementById('unlock-btn-container').style.display = 'block';
-        // 버튼 텍스트 업데이트
         const btn = document.querySelector('#unlock-btn-container button');
-        btn.onclick = playGacha; // 함수 연결
-        btn.innerHTML = `<span>🎲 랜덤 보급품</span><span style="font-size:12px"> 250 G</span>`;
+        btn.onclick = playGacha;
+        btn.innerHTML = `<span>🎲 랜덤 보급품</span><span style="font-size:12px"> ${GAME_CONFIG.gacha.cost} G</span>`;
         btn.style.background = "linear-gradient(to bottom, #9b59b6, #8e44ad)";
     }
 
-    if (currentStage === 4 && !gameState.midBossSpawned) {
+    // 보스 스폰 (4스테이지, Config에 의존)
+    if (currentStageNum === 4 && !gameState.midBossSpawned) {
         gameState.midBossSpawned = true;
         spawnMidBoss();
         gameState.enemySpawnCooldown = 300;
@@ -530,37 +591,29 @@ function spawnEnemyAI() {
         return;
     }
 
-    let availableUnits = [];
-    let spawnTime = 120;
-    let statusText = "";
-
-    switch(currentStage) {
-        case 1: availableUnits = [unitTypes[0]]; spawnTime = 200; statusText = "1단계: 정찰대"; break;
-        case 2: availableUnits = [unitTypes[0], unitTypes[1]]; spawnTime = 160; statusText = "2단계: 공격 부대"; break;
-        case 3: availableUnits = [unitTypes[0], unitTypes[1], unitTypes[2]]; spawnTime = 130; statusText = "3단계: 정규군 진격"; break;
-        case 4: availableUnits = [unitTypes[0], unitTypes[1], unitTypes[2]]; spawnTime = 110; statusText = "4단계: 보스 지원 사격"; break;
-        case 5: availableUnits = unitTypes; spawnTime = 90; statusText = "5단계: 마법 부대 합류"; break;
-        case 6: availableUnits = unitTypes; spawnTime = 70; statusText = "6단계: 총공격 개시"; break;
-        case 7: availableUnits = unitTypes; spawnTime = 50; statusText = "7단계: 최후의 결전"; break;
-    }
-
+    // 상태 텍스트
+    let statusText = currentStageObj.title;
     if(gameState.midBossSpawned && units.some(u=>u.id==='midboss')) statusText = "⚠️ 중간 보스 교전 중! ⚠️";
-
     document.getElementById('enemy-status').innerText = statusText;
 
-    const randomUnit = availableUnits[Math.floor(Math.random() * availableUnits.length)];
-    if (randomUnit.id !== 'cannon') {
-        units.push(new Unit(randomUnit, 'enemy'));
+    // 유닛 스폰
+    const availableIndices = currentStageObj.unitIdxs;
+    const randomIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    const unitToSpawn = unitTypes[randomIdx];
+
+    // 대포는 적군일 때 일반 검병으로 대체 (너무 강함 방지)
+    if (unitToSpawn.id !== 'cannon') {
+        units.push(new Unit(unitToSpawn, 'enemy'));
     } else {
         units.push(new Unit(unitTypes[0], 'enemy'));
     }
 
-    gameState.enemySpawnCooldown = spawnTime + Math.random() * 30;
+    gameState.enemySpawnCooldown = currentStageObj.spawnInterval + Math.random() * 30;
 }
 
 function spawnMidBoss() {
     createDamageText(canvas.width/2, 200, "⚠️ WARNING ⚠️", "red");
-    createDamageText(canvas.width/2, 230, "오크 대장 등장", "#8e44ad");
+    createDamageText(canvas.width/2, 230, `${midBossData.name} 등장`, "#8e44ad");
     units.push(new Unit(midBossData, 'enemy'));
 }
 
@@ -577,9 +630,10 @@ function update() {
         document.getElementById('game-timer').innerText = `시간: ${timeStr}`;
     }
 
+    // 수입 계산 (Config 사용)
     const merchantCount = units.filter(u => u.team === 'player' && u.id === 'merchant' && u.hp > 0).length;
-    gameState.currentIncome = gameState.baseIncome + (merchantCount * 10);
-    gameState.gold += gameState.currentIncome / 60;
+    gameState.currentIncome = gameState.baseIncome + (merchantCount * GAME_CONFIG.economy.merchantBonus);
+    gameState.gold += gameState.currentIncome / GAME_CONFIG.economy.incomeTick;
 
     for (let key in playerCooldowns) {
         if (playerCooldowns[key] > 0) playerCooldowns[key]--;
@@ -594,10 +648,9 @@ function update() {
                 gameState.gold += u.bounty;
                 createDamageText(u.x, u.y - 20, `+${u.bounty}G`, "#f1c40f");
                 
-                // 중간 보스 처치 시 대량의 골드 지급 (뽑기 3번 분량)
                 if (u.id === 'midboss') {
-                    gameState.gold += 600;
-                    createDamageText(canvas.width/2, canvas.height/2, "보스 처치 보상 +600G!", "#FFD700");
+                    gameState.gold += GAME_CONFIG.economy.midBossBonus;
+                    createDamageText(canvas.width/2, canvas.height/2, `보스 처치 보상 +${GAME_CONFIG.economy.midBossBonus}G!`, "#FFD700");
                 }
             }
             return false; 
@@ -635,21 +688,16 @@ function draw() {
     updateAndDrawEffects();
 }
 
-// [수정됨] 기지 디자인 개선 함수
 function drawBase(base, label) {
-    // 아군 기지: 파란 성(Castle)
     if (label === '아군') {
-        // 본체
-        ctx.fillStyle = '#3498db';
+        ctx.fillStyle = base.color;
         ctx.fillRect(base.x - 30, base.y - 80, 60, 100);
-        // 지붕
         ctx.beginPath();
         ctx.moveTo(base.x - 40, base.y - 80);
         ctx.lineTo(base.x, base.y - 120);
         ctx.lineTo(base.x + 40, base.y - 80);
         ctx.fillStyle = '#2980b9';
         ctx.fill();
-        // 깃발
         ctx.beginPath();
         ctx.moveTo(base.x, base.y - 120);
         ctx.lineTo(base.x, base.y - 140);
@@ -657,30 +705,23 @@ function drawBase(base, label) {
         ctx.stroke();
         ctx.fillStyle = 'blue';
         ctx.fillRect(base.x, base.y - 140, 20, 10);
-        // 창문
         ctx.fillStyle = '#2c3e50';
         ctx.fillRect(base.x - 10, base.y - 60, 20, 20);
-    } 
-    // 적군 기지: 붉은 요새(Fortress)
-    else {
-        // 본체
-        ctx.fillStyle = '#c0392b';
+    } else {
+        ctx.fillStyle = base.color;
         ctx.fillRect(base.x - 30, base.y - 70, 60, 90);
-        // 뿔 장식 (지붕 대신)
         ctx.beginPath();
         ctx.moveTo(base.x - 30, base.y - 70); ctx.lineTo(base.x - 20, base.y - 100); ctx.lineTo(base.x - 10, base.y - 70);
         ctx.moveTo(base.x - 10, base.y - 70); ctx.lineTo(base.x, base.y - 110); ctx.lineTo(base.x + 10, base.y - 70);
         ctx.moveTo(base.x + 10, base.y - 70); ctx.lineTo(base.x + 20, base.y - 100); ctx.lineTo(base.x + 30, base.y - 70);
         ctx.fillStyle = '#7f8c8d';
         ctx.fill();
-        // 해골 입 모양 문
         ctx.fillStyle = '#222';
         ctx.beginPath();
         ctx.arc(base.x, base.y - 20, 15, Math.PI, 0); 
         ctx.fill();
     }
 
-    // 체력바
     const hpPercent = Math.max(0, base.hp / base.maxHp);
     ctx.fillStyle = '#333';
     ctx.fillRect(base.x - 40, base.y - 150, 80, 10);
@@ -705,7 +746,7 @@ function updateUI() {
         
         const coolOverlay = document.getElementById(`cool-${u.id}`);
         const currentCool = playerCooldowns[u.id] || 0;
-        const coolPercent = (currentCool / u.cooldown) * 100;
+        const coolPercent = (currentCool / u.cd) * 100;
         coolOverlay.style.height = `${coolPercent}%`;
 
         if (gameState.gold < u.cost || currentCool > 0) {
@@ -731,7 +772,7 @@ function updateUI() {
     
     const unlockBtn = document.querySelector('#unlock-btn-container button');
     if (unlockBtn) {
-        if (gameState.gold < 200) {
+        if (gameState.gold < GAME_CONFIG.gacha.cost) {
             unlockBtn.style.opacity = '0.6';
         } else {
             unlockBtn.style.opacity = '1.0';
@@ -745,7 +786,6 @@ function endGame(msg) {
     document.getElementById('result-message').innerText = msg;
 }
 
-// --- 유닛 아이콘 그리기 ---
 function drawUnitIcon(ctx, id, team, color) {
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
@@ -754,44 +794,44 @@ function drawUnitIcon(ctx, id, team, color) {
     ctx.fillStyle = color;
 
     switch (id) {
-        case 'sword': // ⚔️
+        case 'sword': 
             ctx.fillStyle = '#ecf0f1';
             ctx.beginPath(); ctx.moveTo(-6, 4); ctx.lineTo(12, 0); ctx.lineTo(-6, -4); ctx.fill(); ctx.stroke();
             ctx.strokeStyle = '#e67e22';
             ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(-6, -6); ctx.moveTo(-6, 0); ctx.lineTo(-12, 0); ctx.stroke();
             break;
-        case 'archer': // 🏹
+        case 'archer': 
             ctx.strokeStyle = '#8e44ad'; ctx.beginPath(); ctx.arc(-5, 0, 12, -Math.PI/2, Math.PI/2); ctx.stroke();
             ctx.strokeStyle = '#ecf0f1'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5, -12); ctx.lineTo(-5, 12); ctx.stroke();
             ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
             break;
-        case 'tank': // 🛡️
+        case 'tank': 
             ctx.fillStyle = color; ctx.strokeStyle = '#fff';
             ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(8, -10); ctx.lineTo(8, 2); ctx.quadraticCurveTo(0, 12, -8, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, 6); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.stroke();
             break;
-        case 'wizard': // 🔮
+        case 'wizard': 
             ctx.strokeStyle = '#8e44ad'; ctx.beginPath(); ctx.moveTo(4, 10); ctx.lineTo(-4, -10); ctx.stroke();
             ctx.fillStyle = '#3498db'; ctx.beginPath(); ctx.arc(-4, -12, 4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             break;
-        case 'cannon': // 💣
+        case 'cannon': 
             ctx.fillStyle = '#8e44ad'; ctx.beginPath(); ctx.arc(0, 5, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#34495e'; ctx.translate(0, -2); ctx.rotate(-0.2); ctx.beginPath(); ctx.rect(-5, -4, 16, 8); ctx.fill(); ctx.stroke();
             break;
-        case 'healer': // 🌿
+        case 'healer': 
             ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.rect(-2, -6, 4, 12); ctx.rect(-6, -2, 12, 4); ctx.fill();
             break;
-        case 'merchant': // 💰
+        case 'merchant': 
             ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(0, 4, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-3, -3); ctx.lineTo(3, -3); ctx.lineTo(0, -9); ctx.closePath(); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#d35400'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText('$', 0, 7);
             break;
-        case 'general': // 🚩
+        case 'general': 
             ctx.strokeStyle = '#7f8c8d'; ctx.beginPath(); ctx.moveTo(-5, 12); ctx.lineTo(-5, -12); ctx.stroke();
             ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.moveTo(-5, -12); ctx.lineTo(10, -5); ctx.lineTo(-5, 2); ctx.fill(); ctx.stroke();
             break;
-        case 'midboss': // 👹
+        case 'midboss': 
             ctx.fillStyle = '#8e44ad'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(-18, -15); ctx.lineTo(-6, -10); ctx.fill(); ctx.beginPath(); ctx.moveTo(10, -5); ctx.lineTo(18, -15); ctx.lineTo(6, -10); ctx.fill();
             ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(-5, 2, 2, 0, Math.PI*2); ctx.arc(5, 2, 2, 0, Math.PI*2); ctx.fill();
