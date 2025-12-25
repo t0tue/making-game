@@ -49,7 +49,7 @@ const GAME_CONFIG = {
 
     // 6. 보스 데이터
     boss: { 
-        id: 'midboss', name: '오크 대장', cost: 700, hp: 3000, dmg: 60, range: 50, speed: 0.6, color: '#8e44ad', icon: '👹' 
+        id: 'midboss', name: '오크 대장', cost: 700, hp: 3000, dmg: 80, range: 50, speed: 0.6, color: '#8e44ad', icon: '👹' 
     },
 
     // 7. 스테이지 설정 (unitIdxs: 0=검병, 1=궁수, 2=방패병 ...)
