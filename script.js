@@ -840,6 +840,27 @@ function drawUnitIcon(ctx, id, team, color) {
     }
 }
 
-initDeck();
-updateStageProgress(1);
-requestAnimationFrame(update);
+let isGameStarted = false;
+
+// 2. 초기 화면만 그려주는 함수 (선택 사항)
+function initGame() {
+    // 덱 UI 등을 미리 보여주고 싶다면 여기서 호출
+    if (typeof initDeck === 'function') initDeck(); 
+    draw(); // 정지된 상태의 첫 프레임 그리기
+}
+
+// 3. 버튼 클릭 시 실행될 함수
+function startGame() {
+    if (isGameStarted) return;
+    isGameStarted = true;
+
+    // 시작 화면 숨기기
+    const startScreen = document.getElementById('start-screen');
+    if (startScreen) startScreen.style.display = 'none';
+
+    // 게임 루프 시작 (원래 있던 자동 실행 코드를 여기로 이동)
+    update(); 
+}
+
+// 4. 스크립트 로드 시 초기화만 실행 (게임 루프 X)
+initGame();
