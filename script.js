@@ -22,7 +22,7 @@ const GAME_CONFIG = {
 
     // 3. 뽑기(Gacha) 설정
     gacha: {
-        cost: 250,              // 뽑기 비용
+        cost: 200,              // 뽑기 비용
         unlockStage: 2,         // 뽑기 해금 스테이지
         probs: {                // 확률 (합계 100 기준이 아님, 순차적 체크)
             hero: 15,           // 15% 확률로 영웅 획득
@@ -510,7 +510,7 @@ function playGacha() {
         
         if (goldRand < 0.4) { reward = 100; msg = "아쉽네요.."; } 
         else if (goldRand < 0.8) { reward = 300; msg = "💰 용돈 획득!"; } 
-        else { reward = 600; msg = "💰💰 복권 당첨!!"; } 
+        else { reward = 500; msg = "💰💰 복권 당첨!!"; } 
         
         gameState.gold += reward;
         createDamageText(playerBase.x, playerBase.y - 100, `${msg} +${reward}G`, "#f1c40f");
