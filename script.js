@@ -518,7 +518,7 @@ function spawnEnemyAI() {
         // 버튼 텍스트 업데이트
         const btn = document.querySelector('#unlock-btn-container button');
         btn.onclick = playGacha; // 함수 연결
-        btn.innerHTML = `<span>🎲 랜덤 보급품</span><span style="font-size:12px">200 G</span>`;
+        btn.innerHTML = `<span>🎲 랜덤 보급품</span><span style="font-size:12px"> 250 G</span>`;
         btn.style.background = "linear-gradient(to bottom, #9b59b6, #8e44ad)";
     }
 
