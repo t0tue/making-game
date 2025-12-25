@@ -4,8 +4,8 @@ const ctx = canvas.getContext('2d');
 // --- 게임 상태 변수 ---
 let gameState = {
     gold: 350,      
-    baseIncome: 10,
-    currentIncome: 10,
+    baseIncome: 15,
+    currentIncome: 15,
     frame: 0,
     seconds: 0,
     stage: 1,
