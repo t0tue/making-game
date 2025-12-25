@@ -177,3 +177,37 @@ button.restart {
     padding: 12px 30px; font-size: 20px; background: #27ae60; color: white;
     border: none; border-radius: 8px; cursor: pointer; margin-top: 20px;
 }
+
+#start-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 800px; /* 캔버스 크기와 맞춤 */
+    height: 400px;
+    background-color: rgba(0, 0, 0, 0.85); /* 반투명 검은 배경 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100; /* 제일 위에 표시 */
+    color: white;
+}
+
+#start-screen h1 {
+    font-size: 40px;
+    margin-bottom: 20px;
+    color: #f1c40f;
+}
+
+#start-screen button {
+    padding: 15px 30px;
+    font-size: 20px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#start-screen button:hover {
+    background-color: #c0392b;
+}
