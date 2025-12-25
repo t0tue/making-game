@@ -15,11 +15,11 @@ let gameState = {
     heroes: [] // 보유 중인 영웅 목록
 };
 
-// --- 기지 데이터 ---
+// 기지 속성
 const playerBase = { x: 60, y: 200, hp: 5000, maxHp: 5000, color: '#3498db' };
 const enemyBase = { x: 780, y: 200, hp: 5000, maxHp: 5000, color: '#e74c3c' };
 
-// --- 유닛 데이터 정의 ---
+// 유닛 속성
 const unitTypes = [
     { id: 'sword', name: '검병', desc: '근접 기본', type: 'icon', cost: 50, baseHp: 120, baseDmg: 10, range: 35, speed: 1.5, color: '#ecf0f1', icon: '⚔️', cooldown: 30, level: 1, maxLevel: 10, upgradeCostBase: 100 },
     { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'icon', cost: 100, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 200 },
@@ -28,10 +28,11 @@ const unitTypes = [
     { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'icon', cost: 400, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 600 }
 ];
 
+//특수 유닛 속성
 const specialUnits = [
     { id: 'merchant', name: '거상', desc: '수입 증가', type: 'icon', cost: 300, cooldown: 60, baseHp: 300, baseDmg: 0, range: 180, speed: 0.8, color: '#FFD700', effectRange: 50, icon: '💰', level: 1, maxLevel: 5, upgradeCostBase: 500 },
     { id: 'healer', name: '사제', desc: '아군 치유', type: 'icon', cost: 350, cooldown: 45, baseHp: 150, baseDmg: -20, range: 160, speed: 1.0, color: '#fab1a0', effectRange: 200, icon: '🌿', level: 1, maxLevel: 5, upgradeCostBase: 500 },
-    { id: 'general', name: '장군', desc: '공격력 버프', type: 'icon', cost: 500, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1, maxLevel: 5, upgradeCostBase: 500 }
+    { id: 'general', name: '장군', desc: '공격력 버프', type: 'icon', cost: 400, cooldown: 90, baseHp: 600, baseDmg: 20, range: 150, speed: 0.9, color: '#e67e22', effectRange: 200, icon: '🚩', level: 1, maxLevel: 5, upgradeCostBase: 500 }
 ];
 
 const midBossData = { 
@@ -60,7 +61,7 @@ let particles = [];
 let damageTexts = [];
 
 
-// --- 유닛 클래스 (수정됨: 플레이어만 강화 적용) ---
+// --- 유닛 클래스 ---
 class Unit {
     constructor(typeData, team) {
         this.id = typeData.id;
@@ -68,12 +69,10 @@ class Unit {
         this.name = typeData.name;
         this.team = team;
         
-        // 현상금 설정
+        // 적 몹 현상금
         this.bounty = Math.floor((typeData.cost || 100) * 0.2);
         if (this.id === 'midboss') this.bounty = 1000;
-
-        // [🔥 핵심 수정] 적군은 업그레이드 레벨 무시 (항상 1레벨 스탯)
-        // 플레이어는 현재 업그레이드 레벨 적용
+        //업그레이드 플레이어만 적용
         const levelToUse = (team === 'player') ? typeData.level : 1;
 
         // 스탯 계산 로직 (getUnitStats 함수 내용을 내장함)
@@ -114,7 +113,7 @@ class Unit {
             this.direction = -1;
         }
     }
-    // ... (이하 메서드들은 기존과 동일)
+    
     refreshStats() {
         if (this.team !== 'player') return;
         let typeData = unitTypes.find(u => u.id === this.id);
@@ -413,9 +412,9 @@ function buyUpgrade(unitId) {
 
 // [수정됨] 확률형 랜덤 박스 (가챠)
 function playGacha() {
-    const cost = 200; // 궁수(130)보다 조금 높은 가격
+    const cost = 250; 
     if (gameState.gold < cost) {
-        alert("골드가 부족합니다! (필요: 200G)");
+        alert("골드가 부족합니다! (필요:  ${cost}G)");
         return;
     }
     
