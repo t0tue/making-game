@@ -59,7 +59,7 @@ const GAME_CONFIG = {
         { level: 2, duration: 35, spawnInterval: 160, unitIdxs: [0, 1],    title: "2단계: 공격 부대" },
         { level: 3, duration: 35, spawnInterval: 130, unitIdxs: [0, 1, 2], title: "3단계: 정규군 진격" },
         { level: 4, duration: 35, spawnInterval: 120, unitIdxs: [0, 1, 2], title: "4단계: 보스 지원 사격" }, // 보스 등장 스테이지
-        { level: 5, duration: 35, spawnInterval: 100,  unitIdxs: [0, 1, 2, 3], title: "5단계: 마법 부대 합류" },
+        { level: 5, duration: 35, spawnInterval: 90,  unitIdxs: [0, 1, 2, 3], title: "5단계: 마법 부대 합류" },
         { level: 6, duration: 35, spawnInterval: 70,  unitIdxs: [0, 1, 2, 3, 4], title: "6단계: 총공격 개시" },
         { level: 7, duration: 999, spawnInterval: 50, unitIdxs: [0, 1, 2, 3, 4], title: "7단계: 최후의 결전" }
     ]
