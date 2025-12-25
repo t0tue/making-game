@@ -58,17 +58,12 @@ const GAME_CONFIG = {
         { level: 2, duration: 35, spawnInterval: 160, unitIdxs: [0, 1],    title: "2단계: 공격 부대" },
         { level: 3, duration: 35, spawnInterval: 130, unitIdxs: [0, 1, 2], title: "3단계: 정규군 진격" },
         { level: 4, duration: 35, spawnInterval: 120, unitIdxs: [0, 1, 2], title: "4단계: 보스 지원 사격" }, // 보스 등장 스테이지
-        { level: 5, duration: 35, spawnInterval: 90,  unitIdxs: [0, 1, 2, 3], title: "5단계: 마법 부대 합류" },
+        { level: 5, duration: 35, spawnInterval: 100,  unitIdxs: [0, 1, 2, 3], title: "5단계: 마법 부대 합류" },
         { level: 6, duration: 35, spawnInterval: 70,  unitIdxs: [0, 1, 2, 3, 4], title: "6단계: 총공격 개시" },
         { level: 7, duration: 999, spawnInterval: 50, unitIdxs: [0, 1, 2, 3, 4], title: "7단계: 최후의 결전" }
     ]
 };
 
-// =================================================================================
-// 🎮 시스템 변수 (여기서부터는 로직입니다)
-// =================================================================================
-
-// 데이터 초기화: 설정값을 바탕으로 실제 사용할 객체 생성
 let unitTypes = GAME_CONFIG.units.map(u => ({
     ...u, type: 'icon', level: 1, maxLevel: 10, baseHp: u.hp, baseDmg: u.dmg, upgradeCostBase: u.upgrade
 }));
@@ -92,10 +87,8 @@ let gameState = {
     midBossSpawned: false,
     gameOver: false,
     enemySpawnCooldown: 0,
-    heroes: [] // 플레이어가 획득한 영웅
-};
+    heroes: []
 
-// 기지 객체 (복사해서 사용)
 const playerBase = { ...GAME_CONFIG.base.player, maxHp: GAME_CONFIG.base.player.hp };
 const enemyBase = { ...GAME_CONFIG.base.enemy, maxHp: GAME_CONFIG.base.enemy.hp };
 
@@ -104,7 +97,6 @@ let playerCooldowns = {};
 let particles = [];
 let damageTexts = [];
 
-// --- 유틸리티 함수 ---
 function getUnitStats(unitData) {
     if (unitData.level === 1) return { hp: unitData.baseHp, dmg: unitData.baseDmg };
     const multiplier = 1 + (unitData.level - 1) * 0.2; 
@@ -118,24 +110,17 @@ function getUpgradeCost(unitData) {
     return unitData.upgradeCostBase * unitData.level;
 }
 
-// --- 유닛 클래스 ---
 class Unit {
     constructor(typeData, team) {
         this.id = typeData.id;
         this.type = typeData.type;
         this.name = typeData.name;
         this.team = team;
-        
-        // Unit 클래스 constructor 내부
-        // 보스 여부와 상관없이 설정된 cost의 20% (또는 원하는 비율)를 줌
         this.bounty = Math.floor((typeData.cost || 100) * 0.2); 
 
         if (this.id === 'midboss') this.bounty = typeData.cost;
 
-        // [핵심] 적군은 강화 미적용 (항상 1레벨) / 플레이어는 현재 레벨 적용
         const levelToUse = (team === 'player') ? typeData.level : 1;
-
-        // 스탯 계산
         let stats = { hp: typeData.baseHp, dmg: typeData.baseDmg };
         if (levelToUse > 1) {
             const multiplier = 1 + (levelToUse - 1) * 0.2; 
@@ -143,7 +128,6 @@ class Unit {
             stats.dmg = Math.floor(stats.dmg * multiplier);
         }
         
-        // 적군 스테이지 난이도 스케일링
         if (team === 'enemy' && this.id !== 'midboss') {
             const stageMulti = 1 + (gameState.stage - 1) * 0.15;
             stats.hp *= stageMulti;
