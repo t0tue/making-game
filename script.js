@@ -14,8 +14,8 @@ const GAME_CONFIG = {economy: {startGold: 350, baseIncome: 10, incomeTick: 60, m
                      ],
                      heroes: [
                          { id: 'merchant', name: '거상', desc: '수입 증가',   cost: 150, hp: 300, dmg: 0,   range: 180, speed: 0.8, cd: 60, color: '#FFD700', icon: '💰', effectRange: 50,  upgrade: 500 },
-                         { id: 'healer',   name: '사제', desc: '아군 치유',   cost: 50, hp: 150, dmg: -20, range: 160, speed: 1.0, cd: 45, color: '#fab1a0', icon: '🌿', effectRange: 200, upgrade: 500 },
-                         { id: 'general',  name: '장군', desc: '공격력 버프', cost: 50, hp: 600, dmg: 20,  range: 150, speed: 0.9, cd: 90, color: '#e67e22', icon: '🚩', effectRange: 200, upgrade: 500 }
+                         { id: 'healer',   name: '사제', desc: '아군 치유',   cost: 100, hp: 150, dmg: -20, range: 160, speed: 1.0, cd: 45, color: '#fab1a0', icon: '🌿', effectRange: 200, upgrade: 500 },
+                         { id: 'general',  name: '장군', desc: '공격력 버프', cost: 100, hp: 600, dmg: 20,  range: 150, speed: 0.9, cd: 90, color: '#e67e22', icon: '🚩', effectRange: 200, upgrade: 500 }
                      ],
                      boss: { id: 'midboss', name: '오크 대장', cost: 1000, hp: 3000, dmg: 80, range: 50, speed: 0.6, color: '#8e44ad', icon: '👹'},
                      stages: [
