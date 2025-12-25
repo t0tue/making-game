@@ -849,17 +849,16 @@ function initGame() {
     draw(); // 정지된 상태의 첫 프레임 그리기
 }
 
-// 3. 버튼 클릭 시 실행될 함수
+// [중요 2] 게임 시작 함수 정의
 function startGame() {
-    if (isGameStarted) return;
-    isGameStarted = true;
+    // 1. 시작 화면(버튼)을 숨김
+    const screen = document.getElementById('start-screen');
+    if (screen) {
+        screen.style.display = 'none';
+    }
 
-    // 시작 화면 숨기기
-    const startScreen = document.getElementById('start-screen');
-    if (startScreen) startScreen.style.display = 'none';
-
-    // 게임 루프 시작 (원래 있던 자동 실행 코드를 여기로 이동)
-    update(); 
+    // 2. 게임 루프 시작
+    update();
 }
 
 // 4. 스크립트 로드 시 초기화만 실행 (게임 루프 X)
