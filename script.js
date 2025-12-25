@@ -21,11 +21,11 @@ const enemyBase = { x: 780, y: 200, hp: 5000, maxHp: 5000, color: '#e74c3c' };
 
 // 유닛 속성
 const unitTypes = [
-    { id: 'sword', name: '검병', desc: '근접 기본', type: 'icon', cost: 50, baseHp: 120, baseDmg: 10, range: 35, speed: 1.5, color: '#ecf0f1', icon: '⚔️', cooldown: 30, level: 1, maxLevel: 10, upgradeCostBase: 100 },
-    { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'icon', cost: 100, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 200 },
-    { id: 'tank', name: '방패병', desc: '높은 체력', type: 'icon', cost: 150, baseHp: 450, baseDmg: 8, range: 35, speed: 0.8, color: '#f1c40f', icon: '🛡️', cooldown: 60, level: 1, maxLevel: 10, upgradeCostBase: 300 },
-    { id: 'wizard', name: '마법사', desc: '광역 폭딜', type: 'icon', cost: 300, baseHp: 90, baseDmg: 45, range: 140, speed: 1.0, color: '#9b59b6', icon: '🔮', cooldown: 90, level: 1, maxLevel: 10, upgradeCostBase: 500 },
-    { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'icon', cost: 400, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 600 }
+    { id: 'sword', name: '검병', desc: '근접 기본', type: 'icon', cost: 50, baseHp: 120, baseDmg: 10, range: 35, speed: 1.5, color: '#ecf0f1', icon: '⚔️', cooldown: 30, level: 1, maxLevel: 10, upgradeCostBase: 80 },
+    { id: 'archer', name: '궁수', desc: '원거리 지원', type: 'icon', cost: 100, baseHp: 70, baseDmg: 15, range: 160, speed: 1.2, color: '#2ecc71', icon: '🏹', cooldown: 45, level: 1, maxLevel: 10, upgradeCostBase: 150 },
+    { id: 'tank', name: '방패병', desc: '높은 체력', type: 'icon', cost: 150, baseHp: 450, baseDmg: 8, range: 35, speed: 0.8, color: '#f1c40f', icon: '🛡️', cooldown: 60, level: 1, maxLevel: 10, upgradeCostBase: 200 },
+    { id: 'wizard', name: '마법사', desc: '광역 폭딜', type: 'icon', cost: 350, baseHp: 90, baseDmg: 40, range: 140, speed: 1.0, color: '#9b59b6', icon: '🔮', cooldown: 90, level: 1, maxLevel: 10, upgradeCostBase: 400 },
+    { id: 'cannon', name: '대포', desc: '고정형 포탑', type: 'icon', cost: 400, baseHp: 250, baseDmg: 120, range: 420, speed: 0, color: '#34495e', icon: '💣', cooldown: 150, level: 1, maxLevel: 10, upgradeCostBase: 500 }
 ];
 
 //특수 유닛 속성
